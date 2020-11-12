@@ -35,23 +35,16 @@ def get_output_of(cmd):
     output = subprocess.check_output(cmd, cwd=enlistment_root)
     return output.decode('ASCII').strip()
 
+# UE Change Begin: Ignore git version to avoid incompatibility between python2 and python3
 def get_last_commit_sha():
-    try:
-        return get_output_of([ "git", "describe", "--always", "--dirty" ])
-    except subprocess.CalledProcessError:
-        return "00000000"
+    return "00000000"
 
 def get_current_branch():
-    try:
-        return get_output_of([ "git", "rev-parse", "--abbrev-ref", "HEAD" ])
-    except subprocess.CalledProcessError:
-        return "private"
+    return "private"
 
 def get_commit_count(sha):
-    try:
-        return get_output_of([ "git", "rev-list", "--count", sha ])
-    except subprocess.CalledProcessError:
-        return 0
+    return 0
+# UE Change End: Ignore git version to avoid incompatibility between python2 and python3
     
 def read_latest_release_info():
     latest_release_file = os.path.join(os.path.dirname(os.path.abspath( __file__)), "latest-release.json")
