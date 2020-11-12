@@ -372,8 +372,16 @@ def fvk_use_scalar_layout: Flag<["-"], "fvk-use-scalar-layout">, Group<spirv_Gro
   HelpText<"Use scalar memory layout for Vulkan resources">;
 def fspv_use_legacy_buffer_matrix_order: Flag<["-"], "fspv-use-legacy-buffer-matrix-order">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Assume the legacy matrix order (row major) when accessing raw buffers (e.g., ByteAdddressBuffer)">;
+// UE Change Begin: Use custom layout rules for UE5.
+def fvk_ue5_layout: Flag<["-"], "fvk-ue5-layout">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Use a memory layout for Vulkan resources that matches what UE5 expects">;
+// UE Change End: Use custom layout rules for UE5.
 def fspv_reflect: Flag<["-"], "fspv-reflect">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Emit additional SPIR-V instructions to aid reflection">;
+// UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.
+def fspv_fusemuladd: Flag<["-"], "fspv-fusemuladd">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Fuse all floating-point multiply-add pairs to prevent reassociation of floating point instructions.">;
+// UE Change End: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.
 def fspv_debug_EQ : Joined<["-"], "fspv-debug=">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Specify whitelist of debug info category (file -> source -> line, tool, vulkan-with-source)">;
 def fspv_extension_EQ : Joined<["-"], "fspv-extension=">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,

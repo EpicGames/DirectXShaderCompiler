@@ -664,6 +664,11 @@ SpirvEmitter::SpirvEmitter(CompilerInstance &ci)
     spirvOptions.tBufferLayoutRule = SpirvLayoutRule::Scalar;
     spirvOptions.sBufferLayoutRule = SpirvLayoutRule::Scalar;
     spirvOptions.ampPayloadLayoutRule = SpirvLayoutRule::Scalar;
+  } else if (spirvOptions.ue5Layout) {
+    spirvOptions.cBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
+    spirvOptions.tBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
+    spirvOptions.sBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
+    spirvOptions.ampPayloadLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
   } else {
     spirvOptions.cBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd140;
     spirvOptions.tBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
@@ -934,6 +939,22 @@ void SpirvEmitter::HandleTranslationUnit(ASTContext &context) {
     if (theCompilerInstance.getCodeGenOpts().OptimizationLevel > 0) {
       // Run optimization passes
       std::string messages;
+
+      // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+      // qualifier for older versions of Metal.
+      if (spirvOptions.enableFMAPass &&
+          !spirvToolsFuseMultiplyAdd(targetEnv, &m, &messages, true)) {
+        emitFatalError("failed to fuse multiply-add pairs in SPIR-V: %0", {})
+            << messages;
+        emitNote("please file a bug report on "
+                 "https://github.com/Microsoft/DirectXShaderCompiler/issues "
+                 "with source code if possible",
+                 {});
+        return;
+      }
+      // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+      // qualifier for older versions of Metal.
+
       if (!spirvToolsOptimize(&m, &messages)) {
         emitFatalError("failed to optimize SPIR-V: %0", {}) << messages;
         emitNote("please file a bug report on "
@@ -942,6 +963,21 @@ void SpirvEmitter::HandleTranslationUnit(ASTContext &context) {
                  {});
         return;
       }
+
+      // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+      // qualifier for older versions of Metal.
+      if (spirvOptions.enableFMAPass &&
+          !spirvToolsFuseMultiplyAdd(targetEnv, &m, &messages, false)) {
+        emitFatalError("failed to fuse multiply-add pairs in SPIR-V: %0", {})
+            << messages;
+        emitNote("please file a bug report on "
+                 "https://github.com/Microsoft/DirectXShaderCompiler/issues "
+                 "with source code if possible",
+                 {});
+        return;
+      }
+      // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+      // qualifier for older versions of Metal.
     }
 
     // Trim unused capabilities.
@@ -14404,6 +14440,34 @@ SpirvEmitter::processSpvIntrinsicTypeDef(const CallExpr *expr) {
       /*isInstr*/ false, expr->getExprLoc());
 }
 
+// UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+// qualifier for older versions of Metal.
+bool SpirvEmitter::spirvToolsFuseMultiplyAdd(spv_target_env env,
+                               std::vector<uint32_t> *module,
+                               std::string *messages, bool bFirst) {
+  spvtools::Optimizer optimizer(env);
+
+  optimizer.SetMessageConsumer(
+      [messages](spv_message_level_t /*level*/, const char * /*source*/,
+                 const spv_position_t & /*position*/,
+                 const char *message) { *messages += message; });
+
+  spvtools::OptimizerOptions options;
+  options.set_run_validator(false);
+
+  optimizer.RegisterPass(spvtools::CreateFusedMultiplyAddPass());
+  if (!bFirst) {
+    optimizer.RegisterPass(spvtools::CreateDeadVariableEliminationPass());
+    optimizer.RegisterPass(spvtools::CreateSimplificationPass());
+    optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());
+    optimizer.RegisterPass(spvtools::CreateCompactIdsPass());
+  }
+
+  return optimizer.Run(module->data(), module->size(), module, options);
+}
+// UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+// qualifier for older versions of Metal.
+
 bool SpirvEmitter::spirvToolsValidate(std::vector<uint32_t> *mod,
                                       std::string *messages) {
   spvtools::SpirvTools tools(featureManager.getTargetEnv());
@@ -14422,6 +14486,11 @@ bool SpirvEmitter::spirvToolsValidate(std::vector<uint32_t> *mod,
     options.SetScalarBlockLayout(true);
   } else if (spirvOptions.useGlLayout) {
     // spirv-val by default checks this.
+  // UE Change Begin: Use custom layout rules for UE5.
+  } else if (spirvOptions.ue5Layout) {
+    options.SetRelaxBlockLayout(true);
+    options.SetUniformBufferStandardLayout(true);
+  // UE Change End: Use custom layout rules for UE5.
   } else {
     options.SetRelaxBlockLayout(true);
   }
