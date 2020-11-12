@@ -1526,6 +1526,15 @@ void SpirvBuilder::decorateNoContraction(SpirvInstruction *target,
   mod->addDecoration(decor);
 }
 
+// UE Change Begin: Decorate SV_Position implicitly with invariant qualifier.
+void SpirvBuilder::decorateInvariant(SpirvInstruction *target,
+                                     SourceLocation srcLoc) {
+  auto *decor =
+      new (context) SpirvDecoration(srcLoc, target, spv::Decoration::Invariant);
+  mod->addDecoration(decor);
+}
+// UE Change End: Decorate SV_Position implicitly with invariant qualifier.
+
 void SpirvBuilder::decoratePerPrimitiveNV(SpirvInstruction *target,
                                           SourceLocation srcLoc) {
   auto *decor = new (context)
