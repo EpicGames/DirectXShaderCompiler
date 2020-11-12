@@ -50,6 +50,11 @@ struct SpirvCodeGenOptions {
   bool disableValidation;
   bool enable16BitTypes;
   bool enableReflect;
+  // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
+  bool enableFMAPass;
+  // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
   bool invertY; // Additive inverse
   bool invertW; // Multiplicative inverse
   bool noWarnEmulatedFeatures;
@@ -58,6 +63,9 @@ struct SpirvCodeGenOptions {
   bool useGlLayout;
   bool useLegacyBufferMatrixOrder;
   bool useScalarLayout;
+  // UE Change Begin: Use custom layout rules for UE5.
+  bool ue5Layout;
+  // UE Change End: Use custom layout rules for UE5.
   bool flattenResourceArrays;
   bool reduceLoadSize;
   bool autoShiftBindings;

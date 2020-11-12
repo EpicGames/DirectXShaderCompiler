@@ -1147,6 +1147,14 @@ private:
   /// Returns true on success and false otherwise.
   bool spirvToolsValidate(std::vector<uint32_t> *mod, std::string *messages);
 
+  // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
+  bool spirvToolsFuseMultiplyAdd(spv_target_env env,
+                                 std::vector<uint32_t> *module,
+                                 std::string *messages, bool bFirst);
+  // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
+
 public:
   /// \brief Wrapper method to create a fatal error message and report it
   /// in the diagnostic engine associated with this consumer.

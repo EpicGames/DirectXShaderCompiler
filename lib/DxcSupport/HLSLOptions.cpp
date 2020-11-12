@@ -967,8 +967,17 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   opts.SpirvOptions.useDxLayout = Args.hasFlag(OPT_fvk_use_dx_layout, OPT_INVALID, false);
   opts.SpirvOptions.useScalarLayout = Args.hasFlag(OPT_fvk_use_scalar_layout, OPT_INVALID, false);
   opts.SpirvOptions.useLegacyBufferMatrixOrder = Args.hasFlag(OPT_fspv_use_legacy_buffer_matrix_order, OPT_INVALID, false);
+  // UE Change Begin: Use custom layout rules for UE5.
+  opts.SpirvOptions.ue5Layout = Args.hasFlag(OPT_fvk_ue5_layout, OPT_INVALID, false);
+  // UE Change End: Use custom layout rules for UE5.
   opts.SpirvOptions.enableReflect = Args.hasFlag(OPT_fspv_reflect, OPT_INVALID, false);
-  opts.SpirvOptions.noWarnIgnoredFeatures = Args.hasFlag(OPT_Wno_vk_ignored_features, OPT_INVALID, false);
+  // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
+  opts.SpirvOptions.enableFMAPass = Args.hasFlag(OPT_fspv_fusemuladd, OPT_INVALID, false);
+  // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
+  opts.SpirvOptions.noWarnIgnoredFeatures =
+      Args.hasFlag(OPT_Wno_vk_ignored_features, OPT_INVALID, false);
   opts.SpirvOptions.noWarnEmulatedFeatures = Args.hasFlag(OPT_Wno_vk_emulated_features, OPT_INVALID, false);
   opts.SpirvOptions.flattenResourceArrays =
       Args.hasFlag(OPT_fspv_flatten_resource_arrays, OPT_INVALID, false);
