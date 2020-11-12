@@ -6941,6 +6941,32 @@ SpirvInstruction *SpirvEmitter::processBinaryOp(
       }
     }
 
+    // UE Change Begin: Hack to make binops cast arguments to necessary types
+    // because otherwise (e.g. sqrt(2.)) is treated as double and we fail
+    // validation
+    QualType lhsCastType = BinaryOperator::isCompoundAssignmentOp(opcode)
+                               ? computationType
+                               : lhsType;
+    if (hlsl::IsHLSLVecType(lhsCastType) && isScalarType(rhsType)) {
+      QualType lhsElemType = {};
+      bool bIsVector = isVectorType(lhsCastType, &lhsElemType);
+
+      if (bIsVector && lhsElemType != rhsType)
+        rhsVal = castToType(rhsVal, rhsType, lhsElemType, rhs->getExprLoc());
+    } else if (hlsl::IsHLSLMatType(lhsCastType) && isScalarType(rhsType)) {
+      QualType lhsElemType = {};
+      uint32_t lhsNumRows = 0, lhsNumCols = 0;
+
+      bool isMatrix =
+          isMxNMatrix(lhsType, &lhsElemType, &lhsNumRows, &lhsNumCols);
+
+      if (isMatrix && lhsElemType != rhsType)
+        rhsVal = castToType(rhsVal, rhsType, lhsElemType, rhs->getExprLoc());
+    }
+    // UE Change End: Hack to make binops cast arguments to necessary types
+    // because otherwise (e.g. sqrt(2.)) is treated as double and we fail
+    // validation
+
     // Normal binary operation
     SpirvInstruction *val = nullptr;
     if (BinaryOperator::isCompoundAssignmentOp(opcode)) {
@@ -7395,6 +7421,25 @@ SpirvEmitter::tryToGenFloatMatrixScale(const BinaryOperator *expr) {
   const Expr *rhs = expr->getRHS();
   const QualType lhsType = lhs->getType();
   const QualType rhsType = rhs->getType();
+
+  // UE Change Begin: Hack to make binops cast arguments to necessary types
+  // because otherwise (e.g. sqrt(2.)) is treated as double and we fail
+  // validation
+  QualType lhsElemType = {}, rhsElemType = {};
+  uint32_t lhsNumRows = 0, lhsNumCols = 0;
+  uint32_t rhsNumRows = 0, rhsNumCols = 0;
+
+  const bool lhsIsMat =
+      isMxNMatrix(lhsType, &lhsElemType, &lhsNumRows, &lhsNumCols);
+  const bool rhsIsMat =
+      isMxNMatrix(rhsType, &rhsElemType, &rhsNumRows, &rhsNumCols);
+
+  if ((lhsIsMat && lhsElemType != rhsType) ||
+      (rhsIsMat && lhsType != rhsElemType))
+    return nullptr;
+  // UE Change End: Hack to make binops cast arguments to necessary types
+  // because otherwise (e.g. sqrt(2.)) is treated as double and we fail
+  // validation
 
   const auto selectOpcode = [](const QualType ty) {
     return isMx1Matrix(ty) || is1xNMatrix(ty) ? spv::Op::OpVectorTimesScalar
