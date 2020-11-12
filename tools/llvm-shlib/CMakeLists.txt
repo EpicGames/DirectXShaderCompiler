@@ -109,9 +109,11 @@ target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
 
 add_dependencies(LLVM libLLVMExports)
 
-if (APPLE)
-  set_property(TARGET LLVM APPEND_STRING PROPERTY
-              LINK_FLAGS
-              " -compatibility_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR} -current_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-endif()
+# UE Change Begin: Don't bake version into dxcompiler library for Mac platform
+#if (APPLE)
+#  set_property(TARGET LLVM APPEND_STRING PROPERTY
+#              LINK_FLAGS
+#              " -compatibility_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR} -current_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+#endif()
+# UE Change End: Don't bake version into dxcompiler library for Mac platform
 
