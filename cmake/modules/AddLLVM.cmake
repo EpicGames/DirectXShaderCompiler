@@ -308,19 +308,21 @@ function(set_windows_version_resource_properties name resource_file)
                "RC_PRODUCT_NAME=\"${ARG_PRODUCT_NAME}\""
                "RC_PRODUCT_VERSION=\"${ARG_VERSION_STRING}\"")
 
-  # HLSL change begin - set common version
-  if(${HLSL_EMBED_VERSION})
-    if (DEFINED resource_file)
-      add_dependencies(${name} hlsl_version_autogen)
-      set_property(SOURCE ${resource_file}
-                  PROPERTY COMPILE_DEFINITIONS
-                  "INCLUDE_HLSL_VERSION_FILE=1")
-      set_property(SOURCE ${resource_file}
-                  PROPERTY COMPILE_OPTIONS
-                  "/I" "${HLSL_VERSION_LOCATION}")
-    endif (DEFINED resource_file)
-  endif(${HLSL_EMBED_VERSION})
-  # HLSL change ends
+# UE Change Begin: Don't bake version into dxcompiler library for Mac platform
+#  # HLSL change begin - set common version
+#  if(${HLSL_EMBED_VERSION})
+#    if (DEFINED resource_file)
+#      add_dependencies(${name} hlsl_version_autogen)
+#      set_property(SOURCE ${resource_file}
+#                  PROPERTY COMPILE_DEFINITIONS
+#                  "INCLUDE_HLSL_VERSION_FILE=1")
+#      set_property(SOURCE ${resource_file}
+#                  PROPERTY COMPILE_OPTIONS
+#                  "/I" "${HLSL_VERSION_LOCATION}")
+#    endif (DEFINED resource_file)
+#  endif(${HLSL_EMBED_VERSION})
+#  # HLSL change ends
+# UE Change End: Don't bake version into dxcompiler library for Mac platform
 endfunction(set_windows_version_resource_properties)
 
 # llvm_add_library(name sources...
@@ -447,11 +449,13 @@ function(llvm_add_library name)
     endif()
 
     # HLSL Change Begin - Don't generate so versioned files.
-    set_target_properties(${name}
-      PROPERTIES
-      SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}
-      VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
-      NO_SONAME On)
+# UE Change Begin: Don't bake version into dxcompiler library for Mac platform
+#    set_target_properties(${name}
+#      PROPERTIES
+#      SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}
+#      VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
+#      NO_SONAME On)
+# UE Change End: Don't bake version into dxcompiler library for Mac platform
     if (APPLE)
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-install_name,@rpath/${CMAKE_SHARED_LIBRARY_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
