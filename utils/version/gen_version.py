@@ -39,26 +39,37 @@ def is_dirty():
     diff = get_output_of(["git", "diff", "HEAD", "--shortstat"])
     return len(diff.strip()) != 0
 
+# UE Change Begin: Ignore git version to avoid incompatibility between python2 and python3
+#def get_last_commit_sha():
+#    try:
+#        sha = get_output_of(["git", "rev-parse", "--short", "HEAD"])
+#        if is_dirty():
+#            sha += "-dirty"
+#        return sha
+#    except subprocess.CalledProcessError:
+#        return "00000000"
+
 def get_last_commit_sha():
-    try:
-        sha = get_output_of(["git", "rev-parse", "--short", "HEAD"])
-        if is_dirty():
-            sha += "-dirty"
-        return sha
-    except subprocess.CalledProcessError:
-        return "00000000"
+    return "00000000"
+
+#def get_current_branch():
+#    try:
+#        return get_output_of(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+#    except subprocess.CalledProcessError:
+#        return "private"
 
 def get_current_branch():
-    try:
-        return get_output_of(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    except subprocess.CalledProcessError:
-        return "private"
+    return "private"
+
+#def get_commit_count(sha):
+#    try:
+#        return get_output_of(["git", "rev-list", "--count", sha])
+#    except subprocess.CalledProcessError:
+#        return 0
 
 def get_commit_count(sha):
-    try:
-        return get_output_of(["git", "rev-list", "--count", sha])
-    except subprocess.CalledProcessError:
-        return 0
+    return 0
+# UE Change End: Ignore git version to avoid incompatibility between python2 and python3
     
 def read_latest_release_info():
     latest_release_file = os.path.join(os.path.dirname(os.path.abspath( __file__)), "latest-release.json")
