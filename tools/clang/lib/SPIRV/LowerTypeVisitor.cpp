@@ -737,6 +737,22 @@ const SpirvType *LowerTypeVisitor::lowerResourceType(QualType type,
         s, llvm::APInt(32, 1), clang::ArrayType::Normal, 0);
     alignmentCalc.getAlignmentAndSize(sArray, rule, isRowMajor, &arrayStride);
 
+    // UE Change Begin: Don't allow padding in structured buffers, we can't
+    // support VK_EXT_scalar_block_layout due to low coverage on Android devices
+    {
+      uint32_t packedArrayStride = 0;
+      alignmentCalc.getAlignmentAndSize(sArray, SpirvLayoutRule::FxcSBuffer,
+                                        isRowMajor, &packedArrayStride);
+      if (packedArrayStride != arrayStride) {
+        emitError("cannot instantiate %0 with given packed alignment; "
+                  "'VK_EXT_scalar_block_layout' not supported",
+                  srcLoc)
+            << name;
+      }
+    }
+    // UE Change End: Don't allow padding in structured buffers, we can't
+    // support VK_EXT_scalar_block_layout due to low coverage on Android devices
+
     // We have a runtime array of structures. So:
     // The stride of the runtime array is the size of the struct.
     const auto *raType =
