@@ -1402,6 +1402,14 @@ private:
   /// Returns a function scope parameter with the same type as |param|.
   SpirvVariable *createFunctionScopeTempFromParameter(const ParmVarDecl *param);
 
+  // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
+  bool spirvToolsFuseMultiplyAdd(spv_target_env env,
+                                 std::vector<uint32_t> *module,
+                                 std::string *messages, bool bFirst);
+  // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+  // qualifier for older versions of Metal.
+
   /// Returns a vector of SpirvInstruction that is the decompostion of `inst`
   /// into scalars. This is recursive. For example, a struct of a 4 element
   /// vector will return 4 scalars.
