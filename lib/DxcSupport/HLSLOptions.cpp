@@ -1142,6 +1142,15 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   opts.SpirvOptions.useDescriptorHeap = Args.hasFlag(
       OPT_fspv_use_descriptor_heap, OPT_fspv_use_emulated_heap, false);
 
+  // UE Change Begin: Use custom layout rules for UE5.
+  opts.SpirvOptions.ue5Layout =
+      Args.hasFlag(OPT_fvk_ue5_layout, OPT_INVALID, false);
+  // UE Change End: Use custom layout rules for UE5.
+  // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.
+  opts.SpirvOptions.enableFMAPass =
+      Args.hasFlag(OPT_fspv_fusemuladd, OPT_INVALID, false);
+  // UE Change End: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.
+
   if (!handleVkShiftArgs(Args, OPT_fvk_b_shift, "b", &opts.SpirvOptions.bShift,
                          errors) ||
       !handleVkShiftArgs(Args, OPT_fvk_t_shift, "t", &opts.SpirvOptions.tShift,
