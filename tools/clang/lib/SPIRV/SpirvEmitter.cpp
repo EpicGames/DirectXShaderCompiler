@@ -12121,10 +12121,16 @@ bool SpirvEmitter::processTessellationShaderAttributes(
                                 decl->getLocation());
   }
 
+  // UE Change Begin: Export all attributes to the domain shader for the benefit
+  // of Metal.
+  #if 0
   // Early return for domain shaders as domain shaders only takes the 'domain'
   // attribute.
   if (spvContext.isDS())
     return true;
+  #endif
+  // UE Change End: Export all attributes to the domain shader for the benefit
+  // of Metal.
 
   if (auto *partitioning = decl->getAttr<HLSLPartitioningAttr>()) {
     const auto scheme = partitioning->getScheme().lower();
