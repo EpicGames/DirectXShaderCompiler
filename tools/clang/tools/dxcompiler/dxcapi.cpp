@@ -111,11 +111,13 @@ static HRESULT ThreadMallocDxcCreateInstance(
   else if (IsEqualCLSID(rclsid, CLSID_DxcContainerReflection)) {
     hr = CreateDxcContainerReflection(riid, ppv);
   }
-// Note: The following targets are not yet enabled for non-Windows platforms.
-#ifdef _WIN32
+  // UE Change Begin: Enable DxcRewriter as it's needed for Metal backend.
   else if (IsEqualCLSID(rclsid, CLSID_DxcRewriter)) {
     hr = CreateDxcRewriter(riid, ppv);
   }
+  // UE Change End: Enable DxcRewriter as it's needed for Metal backend.
+// Note: The following targets are not yet enabled for non-Windows platforms.
+#ifdef _WIN32
   else if (IsEqualCLSID(rclsid, CLSID_DxcDiaDataSource)) {
     hr = CreateDxcDiaDataSource(riid, ppv);
   }
