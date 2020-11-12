@@ -2772,13 +2772,18 @@ bool DeclResultIdMapper::createStageVars(
       }
     }
 
+	// UE Change Begin: Always decorate stage variables with interpolation modes
+    // in tessellation shaders.
     // Decorate with interpolation modes for pixel shader input variables
     // or vertex shader output variables.
     if (((spvContext.isPS() && sigPoint->IsInput()) ||
-         (spvContext.isVS() && sigPoint->IsOutput())) &&
+         (spvContext.isVS() && sigPoint->IsOutput()) ||
+         (spvContext.isHS() || spvContext.isDS())) &&
         // BaryCoord*AMD buitins already encode the interpolation mode.
         semanticKind != hlsl::Semantic::Kind::Barycentrics)
       decorateInterpolationMode(decl, type, varInstr);
+    // UE Change End: Always decorate stage variables with interpolation modes
+    // in tessellation shaders.
 
     if (asInput) {
       *value = spvBuilder.createLoad(evalType, varInstr, loc);
