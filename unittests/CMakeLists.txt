@@ -2,7 +2,9 @@ add_custom_target(UnitTests)
 set_target_properties(UnitTests PROPERTIES FOLDER "Tests")
 
 if (APPLE)
-  set(CMAKE_INSTALL_RPATH "@executable_path/../../lib")
+  #UE Change Begin: Replace rpath with 'install_name_tool' after deployment
+  set(CMAKE_INSTALL_RPATH "RPATH_DUMMY")
+  #UE Change End: Replace rpath with 'install_name_tool' after deployment
 else(UNIX)
   set(CMAKE_INSTALL_RPATH "\$ORIGIN/../../lib${LLVM_LIBDIR_SUFFIX}")
 endif()

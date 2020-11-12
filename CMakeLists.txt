@@ -576,7 +576,9 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 if (APPLE)
   set(CMAKE_INSTALL_NAME_DIR "@rpath")
-  set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
+  #UE Change Begin: Replace rpath with 'install_name_tool' after deployment
+  set(CMAKE_INSTALL_RPATH "RPATH_DUMMY")
+  #UE Change End: Replace rpath with 'install_name_tool' after deployment
 else(UNIX)
   if(NOT DEFINED CMAKE_INSTALL_RPATH)
     set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
