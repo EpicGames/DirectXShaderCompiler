@@ -545,6 +545,9 @@ void SetupCompilerCommon(CompilerInstance &compiler,
   compiler.getLangOpts().EnableFXCCompatMode = opts.EnableFXCCompatMode;
   compiler.getDiagnostics().setIgnoreAllWarnings(!opts.OutputWarnings);
   compiler.getCodeGenOpts().MainFileName = pMainFile;
+  // UE Change Begin: Enable Vulkan specific features in rewriter.
+  compiler.getLangOpts().SPIRV = opts.GenSPIRV;
+  // UE Change End: Enable Vulkan specific features in rewriter.
 
   PreprocessorOptions &PPOpts = compiler.getPreprocessorOpts();
   if (rewrite != nullptr) {
@@ -976,6 +979,9 @@ static HRESULT DoRewriteUnused(DxcLangExtensionsHelper *pHelper,
   ASTHelper astHelper;
   hlsl::options::DxcOpts opts;
   opts.HLSLVersion = hlsl::LangStd::v2015;
+  // UE Change Begin: Enable Vulkan specific features in rewriter.
+  opts.GenSPIRV = true;
+  // UE Change End: Enable Vulkan specific features in rewriter.
 
   GenerateAST(pHelper, pFileName, pRemap, pDefines, defineCount, astHelper,
               opts, msfPtr, w);
@@ -1643,6 +1649,9 @@ public:
 
       hlsl::options::DxcOpts opts;
       opts.HLSLVersion = hlsl::LangStd::v2015;
+      // UE Change Begin: Enable Vulkan specific features in rewriter.
+      opts.GenSPIRV = true;
+      // UE Change End: Enable Vulkan specific features in rewriter.
 
       std::string errors;
       std::string rewrite;
@@ -1697,6 +1706,9 @@ public:
 
       hlsl::options::DxcOpts opts;
       opts.HLSLVersion = hlsl::LangStd::v2015;
+      // UE Change Begin: Enable Vulkan specific features in rewriter.
+      opts.GenSPIRV = true;
+      // UE Change End: Enable Vulkan specific features in rewriter.
 
       opts.RWOpt.SkipFunctionBody |=
           rewriteOption & RewriterOptionMask::SkipFunctionBody;
