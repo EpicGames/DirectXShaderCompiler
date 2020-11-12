@@ -145,11 +145,13 @@ endif (ENABLE_METAL_CODEGEN)
 include_directories(AFTER ${LLVM_INCLUDE_DIR}/dxc/Tracing ${DIASDK_INCLUDE_DIRS} ${HLSL_VERSION_LOCATION})
 include_directories(${LLVM_SOURCE_DIR}/tools/clang/tools/dxcvalidator)
 
+# UE Change Begin: Don't bake version into dxcompiler library for Mac platform
 set_target_properties(dxcompiler
   PROPERTIES
   OUTPUT_NAME "dxcompiler"
-  VERSION ${LIBCLANG_LIBRARY_VERSION}
+#  VERSION ${LIBCLANG_LIBRARY_VERSION}
   DEFINE_SYMBOL _CINDEX_LIB_)
+# UE Change End: Don't bake version into dxcompiler library for Mac platform
 
 if (WIN32)
   set(install_dest RUNTIME DESTINATION bin)
