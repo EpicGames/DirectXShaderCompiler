@@ -706,6 +706,11 @@ public:
   /// \brief Decorates the given target with NoContraction
   void decorateNoContraction(SpirvInstruction *target, SourceLocation);
 
+  // UE Change Begin: Decorate SV_Position implicitly with invariant qualifier.
+  /// \brief Decorates the given target with Invariant
+  void decorateInvariant(SpirvInstruction *target, SourceLocation);
+  // UE Change End: Decorate SV_Position implicitly with invariant qualifier.
+
   /// \brief Decorates the given target with PerPrimitiveNV
   void decoratePerPrimitiveNV(SpirvInstruction *target, SourceLocation);
 
