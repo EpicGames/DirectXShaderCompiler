@@ -785,7 +785,11 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
     }
 
     if (TagDecl *tagDecl = dyn_cast<TagDecl>(tuDecl)) {
+      // UE Change Begin: Workaround: Removing unused types not working properly.
+#if 0
       unusedTypes.insert(tagDecl);
+#endif
+      // UE Change End: Workaround: Removing unused types not working properly.
       if (CXXRecordDecl *recordDecl = dyn_cast<CXXRecordDecl>(tagDecl)) {
         for (CXXMethodDecl *methodDecl : recordDecl->methods()) {
           unusedFunctions.insert(methodDecl);
