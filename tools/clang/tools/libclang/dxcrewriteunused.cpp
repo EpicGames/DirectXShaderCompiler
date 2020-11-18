@@ -155,6 +155,18 @@ public:
       if (fnDeclWithbody) {
         if (!m_visitedFunctions.count(fnDeclWithbody)) {
           m_pendingFunctions.push_back(fnDeclWithbody);
+          // UE Change Begin: Traverse through called function definitions - some
+          // shaders declare prototypes that have no body.
+          const FunctionDecl *definitionFn = nullptr;
+          if (fnDecl->isDefined(definitionFn) && definitionFn &&
+              definitionFn != fnDecl &&
+              !m_visitedFunctions.count(
+                  const_cast<FunctionDecl *>(definitionFn))) {
+            m_pendingFunctions.push_back(
+                const_cast<FunctionDecl *>(definitionFn));
+          }
+          // UE Change End: Traverse through called function definitions - some
+          // shaders declare prototypes that have no body.
         }
       }
       if (fnDeclWithbody && fnDeclWithbody != fnDecl) {
@@ -703,6 +715,12 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
                              bool bRemoveFunctions, raw_ostream &w) {
   ASTContext &C = tu->getASTContext();
 
+  // UE Change Begin: Track structure initialization and don't elide any list
+  // initializers.
+  SmallVector<VarDecl *, 32> pendingStructInit;
+  // UE Change End: Track structure initialization and don't elide any list
+  // initializers.
+
   // Gather all global variables that are not in cbuffers and all functions.
   SmallPtrSet<VarDecl *, 128> &unusedGlobals = helper.unusedGlobals;
   DenseMap<RecordDecl *, unsigned> &anonymousRecordRefCounts =
@@ -726,15 +744,27 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
         }
       }
 
-      unusedGlobals.insert(varDecl);
-      if (const RecordType *recordType =
-              varDecl->getType()->getAs<RecordType>()) {
-        RecordDecl *recordDecl = recordType->getDecl();
-        if (recordDecl && recordDecl->getName().empty()) {
-          anonymousRecordRefCounts[recordDecl]++; // Zero initialized if
-                                                  // non-existing
+      // UE Change Begin: Don't remove static const variables.
+      if (varDecl->getStorageClass() != SC_Static) {
+        unusedGlobals.insert(varDecl);
+        if (const RecordType *recordType =
+                varDecl->getType()->getAs<RecordType>()) {
+          RecordDecl *recordDecl = recordType->getDecl();
+          if (recordDecl && recordDecl->getName().empty()) {
+            anonymousRecordRefCounts[recordDecl]++; // Zero initialized if
+                                                    // non-existing
+          }
         }
       }
+      // UE Change End: Don't remove static const variables.
+      // UE Change Begin: Track structure initialization and don't elide any
+      // list initializers.
+      else if (varDecl->getType().getTypePtr()->isStructureType()) {
+        pendingStructInit.emplace_back(varDecl);
+      }
+      // UE Change Begin: Track structure initialization and don't elide any
+      // list initializers.
+
       continue;
     }
 
@@ -796,6 +826,17 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
     visitedFunctions.insert(pendingDecl);
     visitor.TraverseDecl(pendingDecl);
   }
+
+  // UE Change Begin: Track structure initialization and don't elide any
+  // list initializers.
+  for (auto *pendingDecl : pendingStructInit) {
+    if (TagDecl *tagDecl = pendingDecl->getType()->getAsTagDecl()) {
+      SaveTypeDecl(tagDecl, visitedTypes);
+    }
+  }
+  // UE Change End: Track structure initialization and don't elide any
+  // list initializers.
+  
   // Traverse cbuffers to save types for cbuffer constant.
   for (auto *CBDecl : cbufferDecls) {
     visitor.TraverseDecl(CBDecl);
