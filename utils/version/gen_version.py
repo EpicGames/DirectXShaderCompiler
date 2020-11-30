@@ -109,11 +109,15 @@ class VersionGen():
         print('#undef {}'.format(name))
         print('#endif')
         print('#define {} {}'.format(name, value))
-        print()
+        # UE Change Begin: Python3 prints '()' instead of blank line when quotation marks are missing
+        print('')
+        # UE Change End: Python3 prints '()' instead of blank line when quotation marks are missing
 
     def print_version(self):
         print('#pragma once')
-        print()
+        # UE Change Begin: Python3 prints '()' instead of blank line when quotation marks are missing
+        print('')
+        # UE Change End: Python3 prints '()' instead of blank line when quotation marks are missing
         self.print_define('RC_COMPANY_NAME',      '"Microsoft(r) Corporation"')
         self.print_define('RC_VERSION_FIELD_1',   self.rc_version_field_1())
         self.print_define('RC_VERSION_FIELD_2',   self.rc_version_field_2())

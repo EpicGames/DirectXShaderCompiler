@@ -437,7 +437,10 @@ set(TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 include(HandleLLVMOptions)
 
 # Verify that we can find a Python 3 interpreter and force cmake to use it.
-find_package(PythonInterp 3 REQUIRED)
+# UE Change Begin: Support Cmake 3.12+ in finding python3
+find_package(Python3 COMPONENTS Interpreter Development)
+#find_package(PythonInterp 3 REQUIRED)
+# UE Change End: Support Cmake 3.12+ in finding python3
 
 ######
 # LLVMBuild Integration
