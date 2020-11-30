@@ -1335,6 +1335,13 @@ SpirvVariable *DeclResultIdMapper::createStructOrStructArrayVarOfExplicitLayout(
   // Collect the type and name for each field
   llvm::SmallVector<HybridStructType::FieldInfo, 4> fields;
   for (const auto *subDecl : declGroup) {
+    // UE Change Begin: Threadgroup variables should not be put in globals
+    // table.
+    if (forGlobals && subDecl->hasAttr<HLSLGroupSharedAttr>())
+      continue;
+    // UE Change End: Threadgroup variables should not be put in globals
+    // table.
+
     // The field can only be FieldDecl (for normal structs) or VarDecl (for
     // HLSLBufferDecls).
     assert(isa<VarDecl>(subDecl) || isa<FieldDecl>(subDecl));
@@ -1600,6 +1607,13 @@ void DeclResultIdMapper::createGlobalsCBuffer(const VarDecl *var) {
 
   uint32_t index = 0;
   for (const auto *decl : collectDeclsInDeclContext(context)) {
+    // UE Change Begin: Threadgroup variables should not be put in globals
+    // table.
+    if (decl->getAttr<HLSLGroupSharedAttr>())
+      continue;
+    // UE Change End: Threadgroup variables should not be put in globals
+    // table.
+
     if (const auto *varDecl = dyn_cast<VarDecl>(decl)) {
       if (!spirvOptions.noWarnIgnoredFeatures) {
         if (const auto *init = varDecl->getInit())
