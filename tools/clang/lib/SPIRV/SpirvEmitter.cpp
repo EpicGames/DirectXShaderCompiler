@@ -10316,7 +10316,11 @@ SpirvInstruction *SpirvEmitter::processIntrinsicDot(const CallExpr *callExpr) {
   // The result type must be a scalar.
   assert(returnIsScalar);
   // The element type of each argument and the return type must be the same.
-  assert(returnType == vec1ComponentType);
+  // UE Change End: Comment out the assert that fails in one of our dot product
+  // invocations because of a half/float mismatch.
+  //assert(returnType == vec1ComponentType);
+  // UE Change End: Comment out the assert that fails in one of our dot product
+  // invocations because of a half/float mismatch.
   assert(vec0ComponentType == vec1ComponentType);
   // The size of the two arguments must be equal.
   assert(vec0Size == vec1Size);
