@@ -881,6 +881,7 @@ void SpirvEmitter::HandleTranslationUnit(ASTContext &context) {
 
       // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
       // qualifier for older versions of Metal.
+      const spv_target_env targetEnv = featureManager.getTargetEnv();
       if (spirvOptions.enableFMAPass &&
           !spirvToolsFuseMultiplyAdd(featureManager.getTargetEnv(), &m, &messages, true)) {
         emitFatalError("failed to fuse multiply-add pairs in SPIR-V: %0", {})
