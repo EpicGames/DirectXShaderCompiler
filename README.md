@@ -29,11 +29,11 @@ At the moment, the DirectX HLSL Compiler provides the following components:
 
 The Microsoft Windows SDK releases include a supported version of the compiler and validator.
 
-The goal of the project is to allow the broader community of shader developers to contribute to the language and representation of shader programs, maintaining the principles of compatibility and supportability for the platform. It's currently in active development across two axes: language evolution (with no impact to DXIL representation), and surfacing hardware capabilities (with impact to DXIL, and thus requiring coordination with GPU implementations).
+The goal of the project is to allow the broader community of shader developers to contribute to the language and representation of shader programs, maintaining the principles of compatibility and supportability for the platform. It's currently in active development across two axes: language evolution (with no impact on DXIL representation), and surfacing hardware capabilities (with impact to DXIL, and thus requiring coordination with GPU implementations).
 
 ### Pre-built Releases
 
-Binary packages containing the output of this project are available from appveyor. Development kits containing only the dxc.exe driver app, the dxcompiler.dll, and the dxil.dll signing binary are available [here](https://github.com/microsoft/DirectXShaderCompiler/wiki/Releases), or in the [releases tab](https://github.com/microsoft/DirectXShaderCompiler/releases).
+Binary packages containing the output of this project are available from the appveyor. Development kits containing only the dxc.exe driver app, the dxcompiler.dll, and the dxil.dll signing binary are available [here](https://github.com/microsoft/DirectXShaderCompiler/wiki/Releases), or in the [releases tab](https://github.com/microsoft/DirectXShaderCompiler/releases).
 
 ### SPIR-V CodeGen
 
@@ -100,7 +100,7 @@ release mode for DXIL 1.1 and Shader Model 6.1 (View Instancing support only).
 
 Drivers can be downloaded from the following link [Intel Graphics Drivers](https://downloadcenter.intel.com/product/80939/Graphics-Drivers)
 
-Direct access to 15.60 driver (latest as of of this update) is provided below:
+Direct access to 15.60 drivers (latest as of this update) is provided below:
 
 [Installer](https://downloadmirror.intel.com/27412/a08/win64_15.60.2.4901.exe)
 
