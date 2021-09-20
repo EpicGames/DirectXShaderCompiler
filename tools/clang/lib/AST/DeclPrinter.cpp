@@ -49,6 +49,10 @@ namespace {
 
     void PrintObjCTypeParams(ObjCTypeParamList *Params);
 
+    // UE Change Being: Print #line directive
+    void PrintLineDirective(Decl *D);
+    // UE Change End: Print #line directive
+
   public:
     DeclPrinter(raw_ostream &Out, const PrintingPolicy &Policy,
                 unsigned Indentation = 0, bool PrintInstantiation = false)
@@ -455,6 +459,10 @@ void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
 }
 
 void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
+  // UE Change Begin: Print #line directive
+  PrintLineDirective(D);
+  // UE Change End: Print #line directive
+
   CXXConstructorDecl *CDecl = dyn_cast<CXXConstructorDecl>(D);
   CXXConversionDecl *ConversionDecl = dyn_cast<CXXConversionDecl>(D);
   if (!Policy.SuppressSpecifiers) {
@@ -756,6 +764,13 @@ void DeclPrinter::VisitLabelDecl(LabelDecl *D) {
 }
 
 void DeclPrinter::VisitVarDecl(VarDecl *D) {
+  // UE Change Begin: Print #line directive
+  DeclContext *DC = D->getDeclContext();
+  if (D->isDefinedOutsideFunctionOrMethod() &&
+      (DC == nullptr || dyn_cast<HLSLBufferDecl>(DC) == nullptr))
+    PrintLineDirective(D);
+  // UE Change End: Print #line directive
+
   if (!Policy.SuppressSpecifiers) {
     StorageClass SC = D->getStorageClass();
     if (SC != SC_None)
@@ -885,6 +900,10 @@ void DeclPrinter::VisitEmptyDecl(EmptyDecl *D) {
 }
 
 void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
+  // UE Change Begin: Print #line directive
+  PrintLineDirective(D);
+  // UE Change End: Print #line directive
+
   if (!Policy.SuppressSpecifiers && D->isModulePrivate())
     Out << "__module_private__ ";
 
@@ -1112,6 +1131,15 @@ void DeclPrinter::PrintObjCTypeParams(ObjCTypeParamList *Params) {
   }
   Out << ">";
 }
+
+// UE Change Being: Print #line directive
+void DeclPrinter::PrintLineDirective(Decl *D) {
+  const auto Loc = D->getLocation();
+  const auto &SM = D->getASTContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+  Out << "#line " << PLoc.getLine() << " \"" << PLoc.getFilename() << "\"\n";
+}
+// UE Change End: Print #line directive
 
 void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
   if (OMD->isInstanceMethod())
@@ -1439,6 +1467,10 @@ void DeclPrinter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
 
 // HLSL Change Begin
 void DeclPrinter::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
+  // UE Change Begin: Print #line directive
+  PrintLineDirective(D);
+  // UE Change End: Print #line directive
+
   if (D->isCBuffer()) {
     Out << "cbuffer ";
   }
