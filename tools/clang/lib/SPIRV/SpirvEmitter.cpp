@@ -637,7 +637,7 @@ SpirvEmitter::SpirvEmitter(CompilerInstance &ci)
     spirvOptions.sBufferLayoutRule = SpirvLayoutRule::Scalar;
     spirvOptions.ampPayloadLayoutRule = SpirvLayoutRule::Scalar;
   } else if (spirvOptions.ue5Layout) {
-    spirvOptions.cBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
+    spirvOptions.cBufferLayoutRule = SpirvLayoutRule::GLSLStd140;
     spirvOptions.tBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
     spirvOptions.sBufferLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
     spirvOptions.ampPayloadLayoutRule = SpirvLayoutRule::RelaxedGLSLStd430;
