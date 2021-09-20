@@ -1605,11 +1605,11 @@ void DeclResultIdMapper::createGlobalsCBuffer(const VarDecl *var) {
       context, /*arraySize*/ 0, ContextUsageKind::Globals, "type.$Globals",
       "$Globals");
 
-  // UE Change Begin: Always apply RelaxedGLSLStd140 layout rules to global
+  // UE Change Begin: Always apply GLSLStd140 layout rules to global
   // constants
   if (spirvOptions.ue5Layout)
-    globals->setLayoutRule(SpirvLayoutRule::RelaxedGLSLStd140);
-  // UE Change End: Always apply RelaxedGLSLStd140 layout rules to global
+    globals->setLayoutRule(SpirvLayoutRule::GLSLStd140);
+  // UE Change End: Always apply GLSLStd140 layout rules to global
   // constants
 
   resourceVars.emplace_back(globals, /*decl*/ nullptr, SourceLocation(),
