@@ -382,6 +382,10 @@ def fspv_reflect: Flag<["-"], "fspv-reflect">, Group<spirv_Group>, Flags<[CoreOp
 def fspv_fusemuladd: Flag<["-"], "fspv-fusemuladd">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Fuse all floating-point multiply-add pairs to prevent reassociation of floating point instructions.">;
 // UE Change End: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.
+// UE Change Begin: Allow to disable scalar block layout
+def fspv_no_scalar_block_layout: Flag<["-"], "fspv-no-scalar-block-layout">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Disable scalar block layout for structured buffers when generating SPIR-V.">;
+// UE Change End: Allow to disable scalar block layout
 def fspv_debug_EQ : Joined<["-"], "fspv-debug=">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Specify whitelist of debug info category (file -> source -> line, tool, vulkan-with-source)">;
 def fspv_extension_EQ : Joined<["-"], "fspv-extension=">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
