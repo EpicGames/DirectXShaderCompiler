@@ -1003,6 +1003,7 @@ LowerTypeVisitor::lowerResourceType(QualType type, SpirvLayoutRule rule,
 
     // UE Change Begin: Don't allow padding in structured buffers, we can't
     // support VK_EXT_scalar_block_layout due to low coverage on Android devices
+    if (spvOptions.disableScalarBlockLayout)
     {
       uint32_t packedArrayStride = 0;
       alignmentCalc.getAlignmentAndSize(sArray, SpirvLayoutRule::FxcSBuffer,
@@ -1134,6 +1135,7 @@ LowerTypeVisitor::lowerResourceType(QualType type, SpirvLayoutRule rule,
 
   if (name == "SubpassInput" || name == "SubpassInputMS") {
     const auto sampledType = hlsl::GetHLSLResourceResultType(type);
+
     return spvContext.getImageType(
         lowerType(getElementType(astContext, sampledType), rule,
                   /*isRowMajor*/ llvm::None, srcLoc),
