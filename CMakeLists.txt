@@ -132,6 +132,13 @@ endif()
 option(ENABLE_SPIRV_CODEGEN "Enables SPIR-V code generation." OFF)
 option(SPIRV_BUILD_TESTS "Build targets for the SPIR-V unit tests." OFF)
 
+# UE Change Begin: Allow explicit DllShutdown to prevent dangling mutex on Linux
+option(DXC_EXPLICIT_DLLSHUTDOWN "Enable explicit DllShutdown" OFF)
+if(DXC_EXPLICIT_DLLSHUTDOWN)
+  add_definitions(-DDXC_EXPLICIT_DLLSHUTDOWN)
+endif()
+# UE Change End: Allow explicit DllShutdown to prevent dangling mutex on Linux
+
 # Enable SPIR-V CodeGen for Linux by default.
 if(NOT WIN32)
   set(ENABLE_SPIRV_CODEGEN ON)
