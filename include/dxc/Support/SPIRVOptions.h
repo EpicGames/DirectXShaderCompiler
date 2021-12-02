@@ -54,6 +54,9 @@ struct SpirvCodeGenOptions {
   // qualifier for older versions of Metal.
   bool enableFMAPass;
   // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+  // UE Change Begin: Allow to disable scalar block layout
+  bool disableScalarBlockLayout;
+  // UE Change End: Allow to disable scalar block layout
   // qualifier for older versions of Metal.
   bool invertY; // Additive inverse
   bool invertW; // Multiplicative inverse

@@ -975,6 +975,10 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   // qualifier for older versions of Metal.
   opts.SpirvOptions.enableFMAPass = Args.hasFlag(OPT_fspv_fusemuladd, OPT_INVALID, false);
   // UE Change End: Add 'fused-multiply-add' pass to emulate invariant
+  // UE Change Begin: Allow to disable scalar block layout
+  opts.SpirvOptions.disableScalarBlockLayout =
+      Args.hasFlag(OPT_fspv_no_scalar_block_layout, OPT_INVALID, false);
+  // UE Change End: Allow to disable scalar block layout
   // qualifier for older versions of Metal.
   opts.SpirvOptions.noWarnIgnoredFeatures =
       Args.hasFlag(OPT_Wno_vk_ignored_features, OPT_INVALID, false);
