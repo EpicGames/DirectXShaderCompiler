@@ -970,6 +970,9 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   // UE Change Begin: Use custom layout rules for UE5.
   opts.SpirvOptions.ue5Layout = Args.hasFlag(OPT_fvk_ue5_layout, OPT_INVALID, false);
   // UE Change End: Use custom layout rules for UE5.
+  // UE Change Begin: Force subpass OpTypeImage depth flag to be set to 0
+  opts.SpirvOptions.forceSubpassImageDepthFalse = Args.hasFlag(OPT_fspv_force_subpass_image_depth_false, OPT_INVALID, false);
+  // UE Change End: Force subpass OpTypeImage depth flag to be set to 0
   opts.SpirvOptions.enableReflect = Args.hasFlag(OPT_fspv_reflect, OPT_INVALID, false);
   // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
   // qualifier for older versions of Metal.
