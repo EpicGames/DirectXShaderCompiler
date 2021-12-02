@@ -376,6 +376,10 @@ def fspv_use_legacy_buffer_matrix_order: Flag<["-"], "fspv-use-legacy-buffer-mat
 def fvk_ue5_layout: Flag<["-"], "fvk-ue5-layout">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Use a memory layout for Vulkan resources that matches what UE5 expects">;
 // UE Change End: Use custom layout rules for UE5.
+// UE Change Begin: Force subpass OpTypeImage depth flag to be set to 0
+def fspv_force_subpass_image_depth_false: Flag<["-"], "fspv-force-subpass-image-depth-false">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Force OpTypeImage depth flag to be set to 0">;
+// UE Change End: Force subpass OpTypeImage depth flag to be set to 0
 def fspv_reflect: Flag<["-"], "fspv-reflect">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Emit additional SPIR-V instructions to aid reflection">;
 // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.

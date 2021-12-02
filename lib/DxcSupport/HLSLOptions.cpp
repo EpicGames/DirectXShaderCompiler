@@ -1081,6 +1081,10 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   opts.SpirvOptions.disableScalarBlockLayout =
       Args.hasFlag(OPT_fspv_no_scalar_block_layout, OPT_INVALID, false);
   // UE Change End: Allow to disable scalar block layout
+  // UE Change Begin: Force subpass OpTypeImage depth flag to be set to 0
+  opts.SpirvOptions.forceSubpassImageDepthFalse = Args.hasFlag(
+      OPT_fspv_force_subpass_image_depth_false, OPT_INVALID, false);
+  // UE Change End: Force subpass OpTypeImage depth flag to be set to 0
 
   if (!handleVkShiftArgs(Args, OPT_fvk_b_shift, "b", &opts.SpirvOptions.bShift,
                          errors) ||

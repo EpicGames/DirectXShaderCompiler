@@ -883,13 +883,17 @@ const SpirvType *LowerTypeVisitor::lowerResourceType(QualType type,
   if (name == "SubpassInput" || name == "SubpassInputMS") {
     const auto sampledType = hlsl::GetHLSLResourceResultType(type);
 
+	// UE Change Begin: Force subpass OpTypeImage depth flag to be set to 0
+
+    const ImageType::WithDepth depthType = getCodeGenOptions().forceSubpassImageDepthFalse ? ImageType::WithDepth::No : ImageType::WithDepth::Unknown; 
     return spvContext.getImageType(
         lowerType(getElementType(astContext, sampledType), rule,
                   /*isRowMajor*/ llvm::None, srcLoc),
-        spv::Dim::SubpassData, ImageType::WithDepth::Unknown,
+        spv::Dim::SubpassData, depthType,
         /*isArrayed=*/false,
         /*isMultipleSampled=*/name == "SubpassInputMS",
         ImageType::WithSampler::No, spv::ImageFormat::Unknown);
+	// UE Change End: Force subpass OpTypeImage depth flag to be set to 0
   }
 
   return nullptr;
