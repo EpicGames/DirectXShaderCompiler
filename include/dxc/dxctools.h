@@ -29,12 +29,14 @@ struct IDxcRewriter : public IUnknown {
                                                         _In_z_ LPCWSTR entryPoint,
                                                         _In_count_(defineCount) DxcDefine *pDefines,
                                                         _In_ UINT32 defineCount,
+                                                        _In_count_(argCount) LPCSTR *pArgs, _In_ UINT32 argCount,
                                                         _COM_Outptr_ IDxcOperationResult **ppResult) = 0;
 
 
   virtual HRESULT STDMETHODCALLTYPE RewriteUnchanged(_In_ IDxcBlobEncoding *pSource,
                                                      _In_count_(defineCount) DxcDefine *pDefines,
                                                      _In_ UINT32 defineCount,
+                                                     _In_count_(argCount) LPCSTR *pArgs, _In_ UINT32 argCount,
                                                      _COM_Outptr_ IDxcOperationResult **ppResult) = 0;
 
   virtual HRESULT STDMETHODCALLTYPE RewriteUnchangedWithInclude(_In_ IDxcBlobEncoding *pSource,
@@ -42,6 +44,7 @@ struct IDxcRewriter : public IUnknown {
                                                      _In_opt_ LPCWSTR pSourceName,
                                                      _In_count_(defineCount) DxcDefine *pDefines,
                                                      _In_ UINT32 defineCount,
+                                                     _In_count_(argCount) LPCSTR *pArgs, _In_ UINT32 argCount,
                                                      // user-provided interface to handle #include directives (optional)
                                                      _In_opt_ IDxcIncludeHandler *pIncludeHandler,
                                                      _In_ UINT32  rewriteOption,
