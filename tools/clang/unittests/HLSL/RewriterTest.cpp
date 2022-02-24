@@ -301,7 +301,8 @@ public:
     // Run rewrite no function body on the source code
     VERIFY_SUCCEEDED(pRewriter->RewriteUnchangedWithInclude(
         source.BlobEncoding, fileName.c_str(), myDefines, myDefinesCount,
-        m_pIncludeHandler, rewriteOption, &pRewriteResult));
+        /*pArgs*/ nullptr, 0, m_pIncludeHandler, rewriteOption,
+        &pRewriteResult));
 
     CComPtr<IDxcBlob> result;
     VERIFY_SUCCEEDED(pRewriteResult->GetResult(&result));
@@ -482,7 +483,8 @@ TEST_F(RewriterTest, RunWideOneByte) {
   CComPtr<IDxcBlobEncoding> source;
   CreateBlobPinned(widetext, sizeof(widetext), DXC_CP_WIDE, &source);
 
-  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, &pRewriteResult));
+  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, /*pArgs*/ nullptr,
+                                               0, &pRewriteResult));
 
   CComPtr<IDxcBlob> result;
   VERIFY_SUCCEEDED(pRewriteResult->GetResult(&result));
@@ -508,7 +510,8 @@ TEST_F(RewriterTest, RunWideTwoByte) {
   CComPtr<IDxcBlobEncoding> source;
   CreateBlobPinned(widetext, sizeof(widetext), DXC_CP_WIDE, &source);
 
-  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, &pRewriteResult));
+  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, /*pArgs*/ nullptr,
+                                               0, &pRewriteResult));
 
   CComPtr<IDxcBlob> result;
   VERIFY_SUCCEEDED(pRewriteResult->GetResult(&result));
@@ -533,7 +536,8 @@ TEST_F(RewriterTest, RunWideThreeByteBadChar) {
   CComPtr<IDxcBlobEncoding> source;
   CreateBlobPinned(widetext, sizeof(widetext), DXC_CP_WIDE, &source);
 
-  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, &pRewriteResult));
+  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, /*pArgs*/ nullptr,
+                                               0, &pRewriteResult));
 
   CComPtr<IDxcBlob> result;
   VERIFY_SUCCEEDED(pRewriteResult->GetResult(&result));
@@ -556,7 +560,8 @@ TEST_F(RewriterTest, RunWideThreeByte) {
   CComPtr<IDxcBlobEncoding> source;
   CreateBlobPinned(widetext, sizeof(widetext), DXC_CP_WIDE, &source);
 
-  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, &pRewriteResult));
+  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, /*pArgs*/ nullptr,
+                                               0, &pRewriteResult));
 
   CComPtr<IDxcBlob> result;
   VERIFY_SUCCEEDED(pRewriteResult->GetResult(&result));
@@ -587,7 +592,8 @@ TEST_F(RewriterTest, DISABLED_RunNonUnicode) {
   CreateBlobPinned(greektext, sizeof(greektext), 1253,
                    &source); // 1253 == ANSI Greek
 
-  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, &pRewriteResult));
+  VERIFY_SUCCEEDED(pRewriter->RewriteUnchanged(source, 0, 0, /*pArgs*/ nullptr,
+                                               0, &pRewriteResult));
 
   CComPtr<IDxcBlob> result;
   VERIFY_SUCCEEDED(pRewriteResult->GetResult(&result));
@@ -662,7 +668,7 @@ TEST_F(RewriterTest, RunNoStatic) {
   // Run rewrite no function body on the source code
   VERIFY_SUCCEEDED(pRewriter->RewriteUnchangedWithInclude(
       source.BlobEncoding, L"attributes_noerr.hlsl", myDefines, myDefinesCount,
-      /*pIncludeHandler*/ nullptr,
+      /*pArgs*/ nullptr, 0, /*pIncludeHandler*/ nullptr,
       RewriterOptionMask::SkipFunctionBody | RewriterOptionMask::SkipStatic,
       &pRewriteResult));
 
@@ -717,7 +723,7 @@ TEST_F(RewriterTest, RunForceExtern) {
   // Run rewrite no function body on the source code
   VERIFY_SUCCEEDED(pRewriter->RewriteUnchangedWithInclude(
       source.BlobEncoding, L"vector-assignments_noerr.hlsl", myDefines,
-      myDefinesCount, /*pIncludeHandler*/ nullptr,
+      myDefinesCount, /*pArgs*/ nullptr, 0, /*pIncludeHandler*/ nullptr,
       RewriterOptionMask::SkipFunctionBody |
           RewriterOptionMask::GlobalExternByDefault,
       &pRewriteResult));
