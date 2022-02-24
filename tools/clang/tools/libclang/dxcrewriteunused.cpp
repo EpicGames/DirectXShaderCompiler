@@ -555,6 +555,10 @@ void SetupCompilerCommon(CompilerInstance &compiler,
   compiler.getLangOpts().UseMinPrecision = !opts.Enable16BitTypes;
   compiler.getLangOpts().EnableDX9CompatMode = opts.EnableDX9CompatMode;
   compiler.getLangOpts().EnableFXCCompatMode = opts.EnableFXCCompatMode;
+  compiler.getLangOpts().EnablePayloadAccessQualifiers = opts.EnablePayloadQualifiers;
+#ifdef ENABLE_SPIRV_CODEGEN
+  compiler.getLangOpts().SPIRV = opts.GenSPIRV;
+#endif
   compiler.getDiagnostics().setIgnoreAllWarnings(!opts.OutputWarnings);
   compiler.getCodeGenOpts().MainFileName = pMainFile;
   // UE Change Begin: Enable Vulkan specific features in rewriter.
@@ -1022,11 +1026,10 @@ static HRESULT DoRewriteUnused(DxcLangExtensionsHelper *pHelper,
   raw_string_ostream w(warnings);
 
   ASTHelper astHelper;
+
+  // Parse compiler arguments
   hlsl::options::DxcOpts opts;
   opts.HLSLVersion = hlsl::LangStd::v2015;
-  // UE Change Begin: Enable Vulkan specific features in rewriter.
-  opts.GenSPIRV = true;
-  // UE Change End: Enable Vulkan specific features in rewriter.
 
   GenerateAST(pHelper, pFileName, pRemap, pDefines, defineCount, astHelper,
               opts, msfPtr, w);
@@ -1692,11 +1695,9 @@ public:
       std::unique_ptr<ASTUnit::RemappedFile> pRemap(
           new ASTUnit::RemappedFile(fakeName, pBuffer.release()));
 
+	  // Parse compiler arguments
       hlsl::options::DxcOpts opts;
       opts.HLSLVersion = hlsl::LangStd::v2015;
-      // UE Change Begin: Enable Vulkan specific features in rewriter.
-      opts.GenSPIRV = true;
-      // UE Change End: Enable Vulkan specific features in rewriter.
 
       std::string errors;
       std::string rewrite;
