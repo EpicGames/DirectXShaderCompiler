@@ -50,7 +50,8 @@ HRESULT NoFuncBodyRewriter::RewriteToNoFuncBody(
   // Create header with no function body.
   CComPtr<IDxcOperationResult> pRewriteResult;
   IFT(m_pRewriter->RewriteUnchangedWithInclude(
-      pSource, pFilename, m_defines.data(), m_defines.size(),
+      pSource, pFilename, m_defines.data(), m_defines.size(), /*pArgs*/ nullptr,
+      0,
       // Don't need include handler here, include already read in
       // RewriteIncludesToSnippet
       nullptr,
