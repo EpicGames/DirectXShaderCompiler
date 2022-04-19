@@ -563,9 +563,6 @@ void SetupCompilerCommon(CompilerInstance &compiler,
 #endif
   compiler.getDiagnostics().setIgnoreAllWarnings(!opts.OutputWarnings);
   compiler.getCodeGenOpts().MainFileName = pMainFile;
-  // UE Change Begin: Enable Vulkan specific features in rewriter.
-  compiler.getLangOpts().SPIRV = opts.GenSPIRV;
-  // UE Change End: Enable Vulkan specific features in rewriter.
 
   PreprocessorOptions &PPOpts = compiler.getPreprocessorOpts();
   if (rewrite != nullptr) {
