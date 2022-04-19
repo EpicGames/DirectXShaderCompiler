@@ -993,7 +993,6 @@ void SpirvEmitter::HandleTranslationUnit(ASTContext &context) {
 
       // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant
       // qualifier for older versions of Metal.
-      const spv_target_env targetEnv = featureManager.getTargetEnv();
       if (spirvOptions.enableFMAPass &&
           !spirvToolsFuseMultiplyAdd(featureManager.getTargetEnv(), &m,
                                      &messages, true)) {
@@ -16782,6 +16781,9 @@ bool SpirvEmitter::spirvToolsOptimize(std::vector<uint32_t> *mod,
   spvtools::OptimizerOptions options;
   options.set_run_validator(false);
   options.set_preserve_bindings(spirvOptions.preserveBindings);
+  // UE Change Begin: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
+  options.set_preserve_storage_input(spirvOptions.preserveStorageInput);
+  // UE Change End: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
   options.set_max_id_bound(spirvOptions.maxId);
 
   if (spirvOptions.optConfig.empty()) {
@@ -16831,6 +16833,9 @@ bool SpirvEmitter::spirvToolsLegalize(std::vector<uint32_t> *mod,
     optimizer.RegisterPass(
         spvtools::CreateInterfaceVariableScalarReplacementPass());
   }
+  // UE Change Begin: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
+  options.set_preserve_storage_input(spirvOptions.preserveStorageInput);
+  // UE Change End: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
   optimizer.RegisterLegalizationPasses(spirvOptions.preserveInterface);
   // Add flattening of resources if needed.
   if (spirvOptions.flattenResourceArrays) {
