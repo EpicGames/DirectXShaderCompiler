@@ -2,6 +2,10 @@ option(HLSL_COPY_GENERATED_SOURCES "Copy generated sources if different" Off)
 
 add_custom_target(HCTGen)
 
+# UE Change Begin: Don't use --force-lf with hctgen.py because depot files are CRLF
+set(HLSL_AUTOCRLF ON CACHE BOOL "Is core.autocrlf enabled in this clone")
+# UE Change End: Don't use --force-lf with hctgen.py because depot files are CRLF
+
 if (WIN32 AND NOT DEFINED HLSL_AUTOCRLF)
   find_program(git_executable NAMES git git.exe git.cmd)
   execute_process(COMMAND ${git_executable} config --get core.autocrlf
