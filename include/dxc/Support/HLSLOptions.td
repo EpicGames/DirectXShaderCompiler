@@ -380,6 +380,10 @@ def fvk_ue5_layout: Flag<["-"], "fvk-ue5-layout">, Group<spirv_Group>, Flags<[Co
 def fspv_force_subpass_image_depth_false: Flag<["-"], "fspv-force-subpass-image-depth-false">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Force OpTypeImage depth flag to be set to 0">;
 // UE Change End: Force subpass OpTypeImage depth flag to be set to 0
+// UE Change Begin: Preserve storage input classes when optimizing fragment shaders
+def fspv_preserve_storage_input: Flag<["-"], "fspv-preserve-storage-input">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Preserve the storage input classes when optimizing fragment shaders">;
+// UE Change End: Preserve storage input classes when optimizing fragment shaders
 def fspv_reflect: Flag<["-"], "fspv-reflect">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Emit additional SPIR-V instructions to aid reflection">;
 // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.

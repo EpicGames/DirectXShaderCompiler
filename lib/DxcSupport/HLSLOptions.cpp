@@ -1085,6 +1085,10 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   opts.SpirvOptions.forceSubpassImageDepthFalse = Args.hasFlag(
       OPT_fspv_force_subpass_image_depth_false, OPT_INVALID, false);
   // UE Change End: Force subpass OpTypeImage depth flag to be set to 0
+  // UE Change Begin: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
+  opts.SpirvOptions.preserveStorageInput =
+      Args.hasFlag(OPT_fspv_preserve_storage_input, OPT_INVALID, false);
+  // UE Change End: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
 
   if (!handleVkShiftArgs(Args, OPT_fvk_b_shift, "b", &opts.SpirvOptions.bShift,
                          errors) ||
