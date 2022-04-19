@@ -982,6 +982,9 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   opts.SpirvOptions.disableScalarBlockLayout =
       Args.hasFlag(OPT_fspv_no_scalar_block_layout, OPT_INVALID, false);
   // UE Change End: Allow to disable scalar block layout
+  // UE Change Begin: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
+  opts.SpirvOptions.preserveStorageInput = Args.hasFlag(OPT_fspv_preserve_storage_input, OPT_INVALID, false);
+  // UE Change End: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
   // qualifier for older versions of Metal.
   opts.SpirvOptions.noWarnIgnoredFeatures =
       Args.hasFlag(OPT_Wno_vk_ignored_features, OPT_INVALID, false);
