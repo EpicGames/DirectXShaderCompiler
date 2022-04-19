@@ -1612,9 +1612,11 @@ void DeclResultIdMapper::createGlobalsCBuffer(const VarDecl *var) {
   // UE Change End: Always apply GLSLStd140 layout rules to global
   // constants
 
-  resourceVars.emplace_back(globals, /*decl*/ nullptr, SourceLocation(),
-                            nullptr, nullptr, nullptr, /*isCounterVar*/ false,
-                            /*isGlobalsCBuffer*/ true);
+  // UE Change Begin: Fix crash on Android with ARM GPU
+  //resourceVars.emplace_back(globals, /*decl*/ nullptr, SourceLocation(),
+  //                          nullptr, nullptr, nullptr, /*isCounterVar*/ false,
+  //                          /*isGlobalsCBuffer*/ true);
+  // UE Change End: Fix crash on Android with ARM GPU
 
   uint32_t index = 0;
   for (const auto *decl : collectDeclsInDeclContext(context)) {
