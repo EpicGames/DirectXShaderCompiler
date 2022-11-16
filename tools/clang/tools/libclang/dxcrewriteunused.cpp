@@ -130,6 +130,9 @@ private:
   SmallPtrSetImpl<VarDecl *> &m_unusedGlobals;
   SmallPtrSetImpl<FunctionDecl *> &m_visitedFunctions;
   SmallVectorImpl<FunctionDecl *> &m_pendingFunctions;
+  // UE Change Begin: Keep track of visited global declarations
+  SmallPtrSetImpl<VarDecl *> &m_visitedGlobals;
+  // UE Change End: Keep track of visited global declarations
   SmallPtrSetImpl<TypeDecl *> &m_visitedTypes;
 
   void AddRecordType(TagDecl *tagDecl) {
@@ -138,11 +141,19 @@ private:
 
 public:
   VarReferenceVisitor(SmallPtrSetImpl<VarDecl *> &unusedGlobals,
+                      // UE Change Begin: Keep track of visited global declarations
+                      SmallPtrSetImpl<VarDecl*>& visitedGlobals,
+                      // UE Change End: Keep track of visited global declarations
                       SmallPtrSetImpl<FunctionDecl *> &visitedFunctions,
                       SmallVectorImpl<FunctionDecl *> &pendingFunctions,
                       SmallPtrSetImpl<TypeDecl *> &types)
-      : m_unusedGlobals(unusedGlobals), m_visitedFunctions(visitedFunctions),
-        m_pendingFunctions(pendingFunctions), m_visitedTypes(types) {}
+      : m_unusedGlobals(unusedGlobals),
+        // UE Change Begin: Keep track of visited global declarations
+        m_visitedGlobals(visitedGlobals),
+        // UE Change End: Keep track of visited global declarations
+        m_visitedFunctions(visitedFunctions),
+        m_pendingFunctions(pendingFunctions),
+        m_visitedTypes(types){}
 
   bool VisitDeclRefExpr(DeclRefExpr *ref) {
     ValueDecl *valueDecl = ref->getDecl();
@@ -171,21 +182,28 @@ public:
         // Keep the fnDecl for now, since it might be predecl.
         m_visitedFunctions.insert(fnDecl);
       }
-    } else if (VarDecl *varDecl = dyn_cast_or_null<VarDecl>(valueDecl)) {
-      m_unusedGlobals.erase(varDecl);
-      if (TagDecl *tagDecl = varDecl->getType()->getAsTagDecl()) {
-        AddRecordType(tagDecl);
-      }
-      if (Expr *initExp = varDecl->getInit()) {
-        if (InitListExpr *initList = dyn_cast<InitListExpr>(initExp)) {
-          TraverseInitListExpr(initList);
-        } else if (ImplicitCastExpr *initCast =
-                       dyn_cast<ImplicitCastExpr>(initExp)) {
-          TraverseImplicitCastExpr(initCast);
-        } else if (DeclRefExpr *initRef = dyn_cast<DeclRefExpr>(initExp)) {
-          TraverseDeclRefExpr(initRef);
+    } else if (VarDecl* varDecl = dyn_cast_or_null<VarDecl>(valueDecl)) {
+      // UE Change Begin: Keep track of visited global declarations
+      if (!m_visitedGlobals.count(varDecl)) {
+        m_visitedGlobals.insert(varDecl);
+        m_unusedGlobals.erase(varDecl);
+        if (TagDecl *tagDecl = varDecl->getType()->getAsTagDecl()) {
+          AddRecordType(tagDecl);
+        }
+        if (Expr *initExp = varDecl->getInit()) {
+          if (InitListExpr *initList =
+                  dyn_cast<InitListExpr>(initExp)) {
+            TraverseInitListExpr(initList);
+          } else if (ImplicitCastExpr *initCast = dyn_cast<ImplicitCastExpr>(initExp)) {
+            TraverseImplicitCastExpr(initCast);
+          } else if (DeclRefExpr *initRef = dyn_cast<DeclRefExpr>(initExp)) {
+            TraverseDeclRefExpr(initRef);
+          } else if (Stmt* initStmt = dyn_cast<Stmt>(initExp)) {
+            TraverseStmt(initStmt);
+          }
         }
       }
+      // UE Change End: Keep track of visited global declarations
     }
     return true;
   }
@@ -743,7 +761,8 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
       }
 
       // UE Change Begin: Don't remove static const variables.
-      if (varDecl->getStorageClass() != SC_Static) {
+      if (varDecl->getStorageClass() != SC_Static ||
+          IsHLSLResourceType(varDecl->getType())) {
         unusedGlobals.insert(varDecl);
         if (const RecordType *recordType =
                 varDecl->getType()->getAs<RecordType>()) {
@@ -817,11 +836,14 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
   }
 
   // Traverse reachable functions and variables.
+  // UE Change Begin: Keep track of visited global declarations
+  SmallPtrSet<VarDecl *, 128> visitedGlobals;
   SmallPtrSet<FunctionDecl *, 128> visitedFunctions;
   SmallVector<FunctionDecl *, 32> pendingFunctions;
   SmallPtrSet<TypeDecl *, 32> visitedTypes;
-  VarReferenceVisitor visitor(unusedGlobals, visitedFunctions, pendingFunctions,
+  VarReferenceVisitor visitor(unusedGlobals, visitedGlobals, visitedFunctions, pendingFunctions,
                               visitedTypes);
+  // UE Change End: Keep track of visited global declarations
   pendingFunctions.push_back(entryFnDecl);
   while (!pendingFunctions.empty()) {
     FunctionDecl *pendingDecl = pendingFunctions.pop_back_val();
@@ -1154,7 +1176,6 @@ static HRESULT DoSimpleReWrite(DxcLangExtensionsHelper *pHelper,
   }
 
   PrintingPolicy p = PrintingPolicy(C.getPrintingPolicy());
-  p.HLSLOmitDefaultTemplateParams = 1;
   p.Indentation = 1;
 
   if (entryFnDecl) {
