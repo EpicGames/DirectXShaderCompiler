@@ -44,6 +44,9 @@ ShaderFlags::ShaderFlags()
       m_bResourceDescriptorHeapIndexing(false),
       m_bSamplerDescriptorHeapIndexing(false),
       m_bAtomicInt64OnHeapResource(false), m_bResMayNotAlias(false),
+      // UE Change Begin: Added UserInfo container and check for derivative ops
+      m_bHasDerivativeOps(false),
+      // UE Change End: Added UserInfo container and check for derivative ops
       m_bAdvancedTextureOps(false), m_bWriteableMSAATextures(false),
       m_bWaveMMA(false), m_bSampleCmpGradientOrBias(false),
       m_bExtendedCommandInfo(false), m_bUsesDerivatives(false),
@@ -498,6 +501,9 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
       DXIL::CompareVersions(valMajor, valMinor, 1, 8) < 0;
   bool hasWriteableMSAATextures_1_7 = false;
   bool hasWriteableMSAATextures = false;
+  // UE Change Begin: Added UserInfo container and check for derivative ops
+  bool hasDerivativeOps = false;
+  // UE Change End: Added UserInfo container and check for derivative ops
 
   // Set up resource to binding handle map for 64-bit atomics usage
   std::unordered_map<ResourceKey, DxilResource *, ResKeyHash, ResKeyEq> resMap;
@@ -667,6 +673,20 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
             }
           }
           break;
+        // UE Change Begin: Added UserInfo container and check for derivative
+        // ops
+        case DXIL::OpCode::QuadOp:
+        case DXIL::OpCode::QuadReadLaneAt:
+        case DXIL::OpCode::QuadVote:
+        case DXIL::OpCode::TextureGather:
+        case DXIL::OpCode::TextureGatherCmp:
+        case DXIL::OpCode::Texture2DMSGetSamplePosition:
+        case DXIL::OpCode::WriteSamplerFeedback:
+        case DXIL::OpCode::WriteSamplerFeedbackBias:
+        case DXIL::OpCode::WriteSamplerFeedbackLevel:
+          hasDerivativeOps = true;
+          break;
+        // UE Change End: Added UserInfo container and check for derivative ops
         case DXIL::OpCode::SampleLevel:
         case DXIL::OpCode::SampleCmpLevelZero:
           hasAdvancedTextureOps |= hasNonConstantSampleOffsets(CI);
@@ -681,6 +701,9 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
         case DXIL::OpCode::SampleBias:
         case DXIL::OpCode::SampleCmp:
         case DXIL::OpCode::SampleCmpBias:
+          // UE Change Begin: Added UserInfo container and check for derivative ops
+          hasDerivativeOps = true;
+          // UE Change End: Added UserInfo container and check for derivative ops
           hasAdvancedTextureOps |= hasNonConstantSampleOffsets(CI);
           hasLodClamp |= hasSampleClamp(CI);
           hasSampleCmpGradientOrBias = dxilOp == DXIL::OpCode::SampleCmpBias;
@@ -690,6 +713,9 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
         case DXIL::OpCode::DerivCoarseX:
         case DXIL::OpCode::DerivCoarseY:
         case DXIL::OpCode::CalculateLOD: {
+          // UE Change Begin: Added UserInfo container and check for derivative ops
+          hasDerivativeOps = true;
+          // UE Change End: Added UserInfo container and check for derivative ops
           hasDerivatives = true;
         } break;
         case DXIL::OpCode::CreateHandleFromHeap: {
@@ -719,6 +745,9 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
           LLVM_FALLTHROUGH;
         case DXIL::OpCode::SampleCmpLevel:
         case DXIL::OpCode::TextureGatherRaw:
+          // UE Change Begin: Added UserInfo container and check for derivative ops
+          hasDerivativeOps = true;
+          // UE Change End: Added UserInfo container and check for derivative ops
           hasAdvancedTextureOps = true;
           break;
         case DXIL::OpCode::WaveMatrix_Add:
@@ -870,6 +899,10 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
   flag.SetExtendedCommandInfo(hasExtendedCommandInfo);
   flag.SetUsesDerivatives(hasDerivatives);
   flag.SetRequiresGroup(requiresGroup);
+
+  // UE Change Begin: Added UserInfo container and check for derivative ops
+  flag.SetHasDerivativeOps(hasDerivativeOps);
+  // UE Change End: Added UserInfo container and check for derivative ops
 
   return flag;
 }

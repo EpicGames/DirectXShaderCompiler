@@ -86,6 +86,9 @@ enum DxilFourCC {
   DFCC_ShaderDebugInfoDXIL = DXIL_FOURCC('I', 'L', 'D', 'B'),
   DFCC_ShaderDebugName = DXIL_FOURCC('I', 'L', 'D', 'N'),
   DFCC_FeatureInfo = DXIL_FOURCC('S', 'F', 'I', '0'),
+  // UE Change Begin: Added UserInfo container and check for derivative ops
+  DFCC_UserInfo = DXIL_FOURCC('U', 'S', 'E', 'R'),
+  // UE Change End: Added UserInfo container and check for derivative ops
   DFCC_PrivateData = DXIL_FOURCC('P', 'R', 'I', 'V'),
   DFCC_RootSignature = DXIL_FOURCC('R', 'T', 'S', '0'),
   DFCC_DXIL = DXIL_FOURCC('D', 'X', 'I', 'L'),
@@ -102,6 +105,12 @@ enum DxilFourCC {
 struct DxilShaderFeatureInfo {
   uint64_t FeatureFlags;
 };
+
+// UE Change Begin: Added UserInfo container and check for derivative ops
+struct DxilUserInfo {
+  uint64_t UserFlags;
+};
+// UE Change End: Added UserInfo container and check for derivative ops
 
 // DXIL program information.
 struct DxilBitcodeHeader {

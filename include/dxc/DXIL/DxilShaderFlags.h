@@ -57,6 +57,11 @@ public:
   }
   bool GetForceEarlyDepthStencil() const { return m_bForceEarlyDepthStencil; }
 
+  // UE Change Begin: Added UserInfo container and check for derivative ops
+  void SetHasDerivativeOps(bool flag) { m_bHasDerivativeOps = flag; }
+  bool GetHasDerivativeOps() const { return m_bHasDerivativeOps; }
+  // UE Change End: Added UserInfo container and check for derivative ops
+
   void SetEnableRawAndStructuredBuffers(bool flag) {
     m_bEnableRawAndStructuredBuffers = flag;
   }
@@ -349,7 +354,13 @@ private:
   unsigned m_bRequiresGroup : 1; // SHADER_FEATURE_OPT_REQUIRES_GROUP
                                  // (OptFeatureInfo_RequiresGroup)
 
-  uint32_t m_align1 : 23; // align to 64 bit.
+  // UE Change Begin: Added UserInfo container and check for derivative ops
+  unsigned m_bHasDerivativeOps : 1;
+  // UE Change End: Added UserInfo container and check for derivative ops
+
+  // UE Change Begin: Added UserInfo container and check for derivative ops
+  uint32_t m_align1 : 22; // align to 64 bit.
+  // UE Change End: Added UserInfo container and check for derivative ops
 };
 
 } // namespace hlsl

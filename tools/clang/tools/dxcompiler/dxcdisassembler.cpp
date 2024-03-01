@@ -384,6 +384,23 @@ void PrintFeatureInfo(const DxilShaderFeatureInfo *pFeatureInfo,
   OS << comment << "\n";
 }
 
+// UE Change Begin: Added UserInfo container and check for derivative ops
+void PrintUserInfo(const DxilUserInfo *pUserInfo,
+                             raw_string_ostream &OS, StringRef comment) {
+  uint64_t userFlags = pUserInfo->UserFlags;
+  const bool bNoDerivativeOps = (userFlags & kNoDerivativeOps) != 0;
+  OS << comment << "\n";
+  OS << comment << " User Info:" << "\n";
+  OS << comment << "\n";
+  if (bNoDerivativeOps) {
+    OS << comment << "       " << "Shader does not use derivative ops" << "\n";
+  } else {
+    OS << comment << "       " << "Shader uses derivative ops" << "\n";
+  }
+  OS << comment << "\n";
+}
+// UE Change End: Added UserInfo container and check for derivative ops
+
 void PrintResourceFormat(DxilResourceBase &res, unsigned alignment,
                          raw_string_ostream &OS) {
   switch (res.GetClass()) {
@@ -1660,6 +1677,16 @@ HRESULT Disassemble(IDxcBlob *pProgram, raw_string_ostream &Stream) {
           reinterpret_cast<const DxilShaderFeatureInfo *>(GetDxilPartData(*it)),
           Stream, /*comment*/ ";");
     }
+
+    // UE Change Begin: Added UserInfo container and check for derivative ops
+    it = std::find_if(begin(pContainer), end(pContainer),
+                      DxilPartIsType(DFCC_PrivateData));//DFCC_UserInfo)); // HACK TODO: Use PrivateData for now (pass validation)
+    if (it != end(pContainer)) {
+      PrintUserInfo(
+          reinterpret_cast<const DxilUserInfo *>(GetDxilPartData(*it)),
+          Stream, /*comment*/ ";");
+    }
+    // UE Change End: Added UserInfo container and check for derivative ops
 
     it = std::find_if(begin(pContainer), end(pContainer),
                       DxilPartIsType(DFCC_InputSignature));
