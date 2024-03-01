@@ -92,14 +92,16 @@ function(add_hlsl_hctgen mode)
     endif()
   endif()
 
+# UE Change Begin: This custom build target doesn't produce a helpful error message in MSBuild
   # If we're not copying the sources, set the output for the target as the temp
   # file, and define the verification command
   if(NOT copy_sources)
     set(output ${temp_output})
     if (CLANG_FORMAT_EXE) # Only verify sources if clang-format is available.
-      set(verification COMMAND ${CMAKE_COMMAND} -E compare_files ${temp_output} ${full_output})
+#      set(verification COMMAND ${CMAKE_COMMAND} -E compare_files ${temp_output} ${full_output})
     endif()
   endif()
+# UE Change End: This custom build target doesn't produce a helpful error message in MSBuild
   if(WIN32 AND NOT HLSL_AUTOCRLF)
     set(force_lf "--force-lf")
   endif()
