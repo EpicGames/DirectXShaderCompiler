@@ -51,9 +51,11 @@
 #define _countof(a) (sizeof(a) / sizeof(*(a)))
 
 // If it is GCC, there is no UUID support and we must emulate it.
-#ifndef __clang__
+// UE Change Begin: Emulate UUID on Apple platforms
+#if !defined(__clang__) || defined(__APPLE__)
 #define __EMULATE_UUID 1
 #endif // __clang__
+// UE Change End: Emulate UUID on Apple platforms
 
 #ifdef __EMULATE_UUID
 #define __declspec(x)
@@ -302,7 +304,12 @@ typedef unsigned char *LPBYTE;
 typedef BYTE BOOLEAN;
 typedef BOOLEAN *PBOOLEAN;
 
+// UE Change Begin: Bool is already defined on Apple platforms
+#ifndef OBJC_BOOL_DEFINED
 typedef bool BOOL;
+#endif
+// UE Change End: Bool is already defined on Apple platforms
+
 typedef BOOL *LPBOOL;
 
 typedef int INT;
@@ -532,12 +539,16 @@ constexpr GUID guid_from_string(const char str[37]) {
 
 template <typename interface> inline GUID __emulated_uuidof();
 
+// UE Change Begin: Emulate UUID on Apple platforms
+#ifndef CROSS_PLATFORM_UUIDOF
 #define CROSS_PLATFORM_UUIDOF(interface, spec)                                 \
   struct interface;                                                            \
   template <> inline GUID __emulated_uuidof<interface>() {                     \
     static const IID _IID = guid_from_string(spec);                            \
     return _IID;                                                               \
   }
+#endif
+// UE Change End: Emulate UUID on Apple platforms
 
 #define __uuidof(T) __emulated_uuidof<typename std::decay<T>::type>()
 
