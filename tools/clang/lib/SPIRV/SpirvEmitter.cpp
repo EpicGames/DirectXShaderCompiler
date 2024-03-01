@@ -1125,6 +1125,10 @@ void SpirvEmitter::doDecl(const Decl *decl) {
     doRecordDecl(recordDecl);
   } else if (const auto *enumDecl = dyn_cast<EnumDecl>(decl)) {
     doEnumDecl(enumDecl);
+  // UE Change Begin: Fix SPIRV emitter to ignore static asserts
+  } else if (const auto *staticAssertDecl = dyn_cast<StaticAssertDecl>(decl)) {
+    // nothing to do.
+  // UE Change End: Fix SPIRV emitter to ignore static asserts
   } else if (isa<TypedefNameDecl>(decl)) {
     declIdMapper.recordsSpirvTypeAlias(decl);
   } else if (isa<FunctionTemplateDecl>(decl)) {
