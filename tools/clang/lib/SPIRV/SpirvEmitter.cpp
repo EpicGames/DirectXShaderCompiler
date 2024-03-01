@@ -1047,6 +1047,10 @@ void SpirvEmitter::doDecl(const Decl *decl) {
     doRecordDecl(recordDecl);
   } else if (const auto *enumDecl = dyn_cast<EnumDecl>(decl)) {
     doEnumDecl(enumDecl);
+  // UE Change Begin: Fix SPIRV emitter to ignore static asserts
+  } else if (const auto *staticAssertDecl = dyn_cast<StaticAssertDecl>(decl)) {
+    // ignore
+  // UE Change End: Fix SPIRV emitter to ignore static asserts
   } else if (const auto *classTemplateDecl =
                  dyn_cast<ClassTemplateDecl>(decl)) {
     doClassTemplateDecl(classTemplateDecl);
