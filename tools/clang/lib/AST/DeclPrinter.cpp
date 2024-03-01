@@ -854,7 +854,13 @@ void DeclPrinter::VisitImportDecl(ImportDecl *D) {
 }
 
 void DeclPrinter::VisitStaticAssertDecl(StaticAssertDecl *D) {
-  Out << "static_assert(";
+  // UE Change Begin: Fix static_assert in rewriter for HLSL
+  if (Policy.LangOpts.HLSL) {
+    Out << "_Static_assert(";
+  } else {
+    Out << "static_assert(";
+  }
+  // UE Change End: Fix static_assert in rewriter for HLSL
   D->getAssertExpr()->printPretty(Out, nullptr, Policy, Indentation);
   if (StringLiteral *SL = D->getMessage()) {
     Out << ", ";
