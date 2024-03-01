@@ -1409,6 +1409,16 @@ SpirvVariable *SpirvBuilder::addStageBuiltinVar(QualType type,
       loc, var, spv::Decoration::BuiltIn, {static_cast<uint32_t>(builtin)});
   mod->addDecoration(decor);
 
+  // UE Change Begin: Allow precise semantic outputs
+  // When the output semantic is mark as precise add the NoContraction decorator
+  // on it.
+  if (spirvOptions.supportPreciseOutputs && isPrecise) {
+    auto *decorInv =
+        new (context) SpirvDecoration(loc, var, spv::Decoration::NoContraction);
+    mod->addDecoration(decorInv);
+  }
+  // UE Change End: Allow precise semantic outputs  
+
   // Add variable to cache.
   builtinVars.emplace_back(storageClass, builtin, var);
 

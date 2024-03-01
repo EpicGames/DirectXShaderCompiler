@@ -384,6 +384,14 @@ def fspv_force_subpass_image_depth_false: Flag<["-"], "fspv-force-subpass-image-
 def fspv_preserve_storage_input: Flag<["-"], "fspv-preserve-storage-input">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Preserve the storage input classes when optimizing fragment shaders">;
 // UE Change End: Preserve storage input classes when optimizing fragment shaders
+// UE Change Begin: Allow SV_Position to be implicit invariant
+def fspv_svposition_implicit_invariant: Flag<["-"], "fspv-svposition-implicit-invariant">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Treats SV_Position implicitly as invariant; This may prevent certain optimizations but can address Z-fighting">;
+// UE Change End: Allow SV_Position to be implicit invariant
+// UE Change Begin: Allow precise semantic outputs  
+def fspv_support_precise_outputs: Flag<["-"], "fspv-support-precise-outputs">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Allow precise semantic outputs ; This may prevent certain optimizations but can address Z-fighting">;
+// UE Change End: Allow precise semantic outputs 
 def fspv_reflect: Flag<["-"], "fspv-reflect">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Emit additional SPIR-V instructions to aid reflection">;
 // UE Change Begin: Add 'fused-multiply-add' pass to emulate invariant qualifier for older versions of Metal.

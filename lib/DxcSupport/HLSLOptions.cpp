@@ -1089,6 +1089,13 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   opts.SpirvOptions.preserveStorageInput =
       Args.hasFlag(OPT_fspv_preserve_storage_input, OPT_INVALID, false);
   // UE Change End: Allow preserving unused inputs in shaders, used for OpenGL to match input/outputs
+  // UE Change Begin: Allow SV_Position to be implicit invariant
+  opts.SpirvOptions.svPositionimplicitInvariant =
+      Args.hasFlag(OPT_fspv_svposition_implicit_invariant, OPT_INVALID, false);
+  // UE Change End: Allow SV_Position to be implicit invariant
+  // UE Change Begin: Allow precise semantic outputs 
+  opts.SpirvOptions.supportPreciseOutputs = Args.hasFlag(OPT_fspv_support_precise_outputs, OPT_INVALID, false);
+  // UE Change End: Allow precise semantic outputs 
 
   if (!handleVkShiftArgs(Args, OPT_fvk_b_shift, "b", &opts.SpirvOptions.bShift,
                          errors) ||
