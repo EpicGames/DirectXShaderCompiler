@@ -1510,6 +1510,11 @@ SpirvInstruction *SpirvEmitter::castToType(SpirvInstruction *value,
                                            QualType fromType, QualType toType,
                                            SourceLocation srcLoc,
                                            SourceRange range) {
+  // UE Change Begin: No-op when both types are equal
+  if (fromType == toType)
+    return value;
+  // UE Change End: No-op when both types are equal
+
   uint32_t fromSize = 0;
   uint32_t toSize = 0;
   assert(isVectorType(fromType, nullptr, &fromSize) ==
