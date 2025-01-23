@@ -148,6 +148,21 @@ public:
     detail::DenseSetEmpty Empty;
     return TheMap.insert(std::make_pair(V, Empty));
   }
+
+  // UE Change Begin: Optimized DI location
+  /// Alternative version of find_as which also inserts if not found.
+  /// Allows for single lookup search or insertions.
+  template <class LookupKeyT>
+  std::pair<iterator, bool> find_or_default_as(const LookupKeyT &LookupKey) {
+    return TheMap.insert_as(
+      std::make_pair<ValueT, detail::DenseSetEmpty>(
+        ValueT{},
+        detail::DenseSetEmpty{}
+      ),
+      LookupKey
+    );
+  }
+  // UE Change End: Optimized DI location
   
   // Range insertion of values.
   template<typename InputIt>

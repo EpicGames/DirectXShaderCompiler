@@ -606,6 +606,17 @@ template <typename ...Ts> hash_code hash_combine(const Ts &...args) {
   return helper.combine(0, helper.buffer, helper.buffer + 64, args...);
 }
 
+// UE Change Begin: Optimized DI location
+/// \brief Hash a contiguous short object
+///
+/// Hashes all bytes of the object at given length. When the hashed data is
+/// contiguous, this is preferred over hash_combine, to avoid the redundant
+/// internal copies.
+inline hash_code hash_short_buffer(const void* object, size_t length) {
+  return hashing::detail::hash_short(static_cast<const char *>(object), length, hashing::detail::get_execution_seed());
+}
+// UE Change End: Optimized DI location
+
 // Implementation details for implementations of hash_value overloads provided
 // here.
 namespace hashing {

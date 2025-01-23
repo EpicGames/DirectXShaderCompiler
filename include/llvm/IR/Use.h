@@ -39,16 +39,6 @@ class User;
 class Use;
 template <typename> struct simplify_type;
 
-// Use** is only 4-byte aligned.
-template <> class PointerLikeTypeTraits<Use **> {
-public:
-  static inline void *getAsVoidPointer(Use **P) { return P; }
-  static inline Use **getFromVoidPointer(void *P) {
-    return static_cast<Use **>(P);
-  }
-  enum { NumLowBitsAvailable = 2 };
-};
-
 /// \brief A Use represents the edge between a Value definition and its users.
 ///
 /// This is notionally a two-dimensional linked list. It supports traversing
@@ -72,10 +62,6 @@ public:
   /// that also works with less standard-compliant compilers
   void swap(Use &RHS);
 
-  // A type for the word following an array of hung-off Uses in memory, which is
-  // a pointer back to their User with the bottom bit set.
-  typedef PointerIntPair<User *, 1, unsigned> UserRef;
-
 private:
   Use(const Use &U) = delete;
 
@@ -85,10 +71,8 @@ private:
       removeFromList();
   }
 
-  enum PrevPtrTag { zeroDigitTag, oneDigitTag, stopTag, fullStopTag };
-
   /// Constructor
-  Use(PrevPtrTag tag) : Val(nullptr) { Prev.setInt(tag); }
+  Use(User *Parent) : Parent(Parent) {}
 
 public:
   operator Value *() const { return Val; }
@@ -98,7 +82,7 @@ public:
   ///
   /// For an instruction operand, for example, this will return the
   /// instruction.
-  User *getUser() const;
+  User *getUser() const { return Parent; };
 
   inline void set(Value *Val);
 
@@ -119,24 +103,20 @@ public:
   /// \brief Return the operand # of this use in its User.
   unsigned getOperandNo() const;
 
-  /// \brief Initializes the waymarking tags on an array of Uses.
-  ///
-  /// This sets up the array of Uses such that getUser() can find the User from
-  /// any of those Uses.
-  static Use *initTags(Use *Start, Use *Stop);
-
   /// \brief Destroys Use operands when the number of operands of
   /// a User changes.
   static void zap(Use *Start, const Use *Stop, bool del = false);
 
 private:
-  const Use *getImpliedUser() const;
 
-  Value *Val;
-  Use *Next;
-  PointerIntPair<Use **, 2, PrevPtrTag> Prev;
+  Value *Val = nullptr;
+  Use *Next = nullptr;
 
-  void setPrev(Use **NewPrev) { Prev.setPointer(NewPrev); }
+  Use **Prev = nullptr;
+  User *Parent = nullptr;
+
+  void setPrev(Use **NewPrev) { Prev = NewPrev; }
+
   void addToList(Use **List) {
     Next = *List;
     if (Next)
@@ -145,13 +125,14 @@ private:
     *List = this;
   }
   void removeFromList() {
-    Use **StrippedPrev = Prev.getPointer();
+    Use **StrippedPrev = Prev;
     *StrippedPrev = Next;
     if (Next)
       Next->setPrev(StrippedPrev);
   }
 
   friend class Value;
+  friend class User;
 };
 
 /// \brief Allow clients to treat uses just like values when using

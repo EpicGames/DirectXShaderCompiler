@@ -2354,15 +2354,11 @@ public:
   typedef BasicBlock * const *const_block_iterator;
 
   block_iterator block_begin() {
-    Use::UserRef *ref =
-      reinterpret_cast<Use::UserRef*>(op_begin() + ReservedSpace);
-    return reinterpret_cast<block_iterator>(ref + 1);
+    return reinterpret_cast<block_iterator>(op_begin() + ReservedSpace);
   }
 
   const_block_iterator block_begin() const {
-    const Use::UserRef *ref =
-      reinterpret_cast<const Use::UserRef*>(op_begin() + ReservedSpace);
-    return reinterpret_cast<const_block_iterator>(ref + 1);
+    return reinterpret_cast<const_block_iterator>(op_begin() + ReservedSpace);
   }
 
   block_iterator block_end() {

@@ -70,7 +70,7 @@ protected:
       : Constant(Ty, VTy, Ops, NumOps), Linkage(Linkage),
         Visibility(DefaultVisibility), UnnamedAddr(0),
         DllStorageClass(DefaultStorageClass),
-        ThreadLocal(NotThreadLocal), IntID((Intrinsic::ID)0U), Parent(nullptr) {
+        ThreadLocal(NotThreadLocal), HasLLVMReservedName(false), IntID((Intrinsic::ID)0U), Parent(nullptr) {
     setName(Name);
   }
 
@@ -83,11 +83,12 @@ protected:
 
   unsigned ThreadLocal : 3; // Is this symbol "Thread Local", if so, what is
                             // the desired model?
-  static const unsigned GlobalValueSubClassDataBits = 19;
+  unsigned HasLLVMReservedName : 1; // If the name of this value is reserved (intrinsic)
+  static const unsigned GlobalValueSubClassDataBits = 18;
 
 private:
   // Give subclasses access to what otherwise would be wasted padding.
-  // (19 + 3 + 2 + 1 + 2 + 5) == 32.
+  // (1 + 18 + 3 + 2 + 1 + 2 + 5) == 32.
   unsigned SubClassData : GlobalValueSubClassDataBits;
 
   friend class Constant;
