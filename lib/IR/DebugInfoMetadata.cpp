@@ -19,9 +19,11 @@
 
 using namespace llvm;
 
+// UE Change Begin: Optimized DI location
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
-                       unsigned Column, ArrayRef<Metadata *> MDs)
-    : MDNode(C, DILocationKind, Storage, MDs) {
+                       unsigned Column, ArrayRef<Metadata *> MDs, unsigned Hash)
+    : MDNode(C, DILocationKind, Storage, MDs), Hash(Hash) {
+// UE Change End: Optimized DI location
   assert((MDs.size() == 1 || MDs.size() == 2) &&
          "Expected a scope and optional inlined-at");
 
@@ -45,11 +47,31 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   // Fixup column.
   adjustColumn(Column);
 
+  // UE Change Begin: Optimized DI location
+  DILocationInfo::KeyTy Key(Line, Column, Scope, InlinedAt);
+
+  // Single lookup search or create
+  if (Storage == Uniqued && ShouldCreate) {
+    auto&& [It, Inserted] = Context.pImpl->DILocations.find_or_default_as(Key);
+    if (!Inserted) {
+      return *It;
+    }
+
+    SmallVector<Metadata *, 2> Ops;
+    Ops.push_back(Scope);
+    if (InlinedAt)
+      Ops.push_back(InlinedAt);
+    
+    *It = new (Ops.size()) DILocation(Context, Storage, Line, Column, Ops, Key.getHashValue());
+    return *It;
+  }
+  // UE Change End: Optimized DI location
+
   assert(Scope && "Expected scope");
   if (Storage == Uniqued) {
-    if (auto *N =
-            getUniqued(Context.pImpl->DILocations,
-                       DILocationInfo::KeyTy(Line, Column, Scope, InlinedAt)))
+    // UE Change Begin: Optimized DI location
+    if (auto *N = getUniqued(Context.pImpl->DILocations, Key))
+    // UE Change End: Optimized DI location
       return N;
     if (!ShouldCreate)
       return nullptr;
@@ -62,7 +84,9 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   if (InlinedAt)
     Ops.push_back(InlinedAt);
   return storeImpl(new (Ops.size())
-                       DILocation(Context, Storage, Line, Column, Ops),
+  // UE Change Begin: Optimized DI location
+                       DILocation(Context, Storage, Line, Column, Ops, Key.getHashValue()),
+  // UE Change End: Optimized DI location
                    Storage, Context.pImpl->DILocations);
 }
 

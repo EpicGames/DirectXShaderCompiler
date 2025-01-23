@@ -1146,8 +1146,12 @@ class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
+  // UE Change Begin: Optimized DI location
+  unsigned Hash;
+
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
-             unsigned Column, ArrayRef<Metadata *> MDs);
+             unsigned Column, ArrayRef<Metadata *> MDs, unsigned Hash);
+  // UE Change End: Optimized DI location
   ~DILocation() { dropAllReferences(); }
 
   static DILocation *getImpl(LLVMContext &Context, unsigned Line,
@@ -1242,6 +1246,10 @@ public:
       return getOperand(1);
     return nullptr;
   }
+
+  // UE Change Begin: Optimized DI location
+  unsigned getHash() const { return Hash; }
+  // UE Change End: Optimized DI location
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILocationKind;

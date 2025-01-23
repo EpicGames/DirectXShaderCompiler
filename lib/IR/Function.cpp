@@ -265,6 +265,9 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, const Twine &name,
   if (ParentModule)
     ParentModule->getFunctionList().push_back(this);
 
+  // Cache intrinsic checks on value construction
+  HasLLVMReservedName = getName().startswith("llvm.");
+
   // Ensure intrinsics have the right parameter attributes.
   // Note, the IntID field will have been set in Value::setName if this function
   // name is a valid intrinsic ID.
@@ -470,7 +473,7 @@ static Intrinsic::ID lookupIntrinsicID(const ValueName *ValName) {
 
 void Function::recalculateIntrinsicID() {
   const ValueName *ValName = this->getValueName();
-  if (!ValName || !isIntrinsic()) {
+  if (!ValName || !getName().startswith("llvm.")) {
     IntID = Intrinsic::not_intrinsic;
     return;
   }

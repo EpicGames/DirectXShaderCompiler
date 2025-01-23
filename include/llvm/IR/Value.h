@@ -105,12 +105,17 @@ protected:
   ///
   /// Note, this should *NOT* be used directly by any class other than User.
   /// User uses this value to find the Use list.
-  enum : unsigned { NumUserOperandsBits = 29 };
-  unsigned NumUserOperands : NumUserOperandsBits;
+  // UE Change Begin: Improved cache locality of users
+  enum : unsigned { AllocationBits = 8, NumUserOperandsBits = 29 - AllocationBits };
+  uint32_t NumUserOperands : NumUserOperandsBits;
 
-  bool IsUsedByMD : 1;
-  bool HasName : 1;
-  bool HasHungOffUses : 1;
+  uint32_t IsUsedByMD : 1;
+  uint32_t HasName : 1;
+  uint32_t HasHungOffUses : 1;
+  uint32_t PrivateAllocatorData : AllocationBits;
+
+  friend class UserBlockAllocator;
+  // UE Change Begin: Improved cache locality of users
 
 private:
   template <typename UseT> // UseT == 'Use' or 'const Use'

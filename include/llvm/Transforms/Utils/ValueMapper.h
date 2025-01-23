@@ -59,7 +59,13 @@ namespace llvm {
     /// RF_IgnoreMissingEntries - If this flag is set, the remapper ignores
     /// entries that are not in the value map.  If it is unset, it aborts if an
     /// operand is asked to be remapped which doesn't exist in the mapping.
-    RF_IgnoreMissingEntries = 2
+    RF_IgnoreMissingEntries = 2,
+    
+    // UE Change Begin: Instruction remapping fast path
+    /// RF_OperandsOnly - If this flag is set, the remapper only
+    /// redirects operands and basic blocks against the new mappings.
+    RF_OperandsOnly = 4
+    // UE Change End: Instruction remapping fast path
   };
 
   static inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {

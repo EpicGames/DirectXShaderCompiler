@@ -16,6 +16,9 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+// UE Change Begin: Relinking over cloning for single-use users
+#include "llvm/ADT/DenseSet.h"
+// UE Change End: Relinking over cloning for single-use users
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -218,7 +221,7 @@ static void HandleCallsInBlockInlinedThroughInvoke(BasicBlock *BB,
     II->setDebugLoc(CI->getDebugLoc());
     II->setCallingConv(CI->getCallingConv());
     II->setAttributes(CI->getAttributes());
-
+    
     // Make sure that anything using the call now uses the invoke!  This also
     // updates the CallGraph if present, because it uses a WeakTrackingVH.
     CI->replaceAllUsesWith(II);
@@ -291,28 +294,14 @@ static void HandleInlinedInvoke(InvokeInst *II, BasicBlock *FirstNewBlock,
 /// not be differentiated (and this would lead to miscompiles because the
 /// non-aliasing property communicated by the metadata could have
 /// call-site-specific control dependencies).
-static void CloneAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap) {
+// UE Change Begin: Relinking over cloning for single-use users
+static void CloneAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap, SetVector<const MDNode *>& MD) {
   TimeTraceScope TimeScope("CloneAliasScopeMetadata",
                            [&] { return CS.getCalledFunction()->getName(); });
   const Function *CalledFunc = CS.getCalledFunction();
-  SetVector<const MDNode *> MD;
-
-  // Note: We could only clone the metadata if it is already used in the
-  // caller. I'm omitting that check here because it might confuse
-  // inter-procedural alias analysis passes. We can revisit this if it becomes
-  // an efficiency or overhead problem.
-
-  for (Function::const_iterator I = CalledFunc->begin(), IE = CalledFunc->end();
-       I != IE; ++I)
-    for (BasicBlock::const_iterator J = I->begin(), JE = I->end(); J != JE; ++J) {
-      if (const MDNode *M = J->getMetadata(LLVMContext::MD_alias_scope))
-        MD.insert(M);
-      if (const MDNode *M = J->getMetadata(LLVMContext::MD_noalias))
-        MD.insert(M);
-    }
-
-  if (MD.empty())
-    return;
+  //SetVector<const MDNode *> MD;
+  //...
+// UE Change End: Relinking over cloning for single-use users
 
   // Walk the existing metadata, adding the complete (perhaps cyclic) chain to
   // the set.
@@ -398,12 +387,25 @@ static void CloneAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap) {
   }
 }
 
+// UE Change Begin: Relinking over cloning for single-use users
+/// Tracked alias scopes prior to inlining
+struct ValueAliasMd {
+  SmallVector<Metadata *, 4> Scopes;
+  SmallVector<Metadata *, 4> NoAliases;
+};
+
+using ValueAliasScopeMap = DenseMap<const Instruction*, ValueAliasMd>;
+// UE Change End: Relinking over cloning for single-use users
+
 /// If the inlined function has noalias arguments,
 /// then add new alias scopes for each noalias argument, tag the mapped noalias
 /// parameters with noalias metadata specifying the new scope, and tag all
 /// non-derived loads, stores and memory intrinsics with the new alias scopes.
-static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
+// UE Change Begin: Relinking over cloning for single-use users
+static void GetAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
+                                  ValueAliasScopeMap &AMap,
                                   const DataLayout &DL, AliasAnalysis *AA) {
+// UE Change End: Relinking over cloning for single-use users
   TimeTraceScope TimeScope("AddAliasScopeMetadata",
                            [&] { return CS.getCalledFunction()->getName(); });
   if (!EnableNoAliasConversion)
@@ -456,19 +458,18 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
     MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
     NewScopes.insert(std::make_pair(A, NewScope));
   }
+  
+  // UE Change Begin: Relinking over cloning for single-use users
+  // Process in succession order, ignoring anything unreachable
+  SmallSet<const BasicBlock*, 32> VisitedBB;
+  SmallVector<const BasicBlock*, 32> Worklist;
+  Worklist.push_back(&CalledFunc->getEntryBlock());
 
-  // Iterate over all new instructions in the map; for all memory-access
-  // instructions, add the alias scope metadata.
-  for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
-       VMI != VMIE; ++VMI) {
-    if (const Instruction *I = dyn_cast<Instruction>(VMI->first)) {
-      if (!VMI->second)
-        continue;
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
 
-      Instruction *NI = dyn_cast<Instruction>(VMI->second);
-      if (!NI)
-        continue;
-
+    for (BasicBlock::const_iterator I = BB->begin(), JE = BB->end(); I != JE; ++I) {
+  // UE Change End: Relinking over cloning for single-use users
       bool IsArgMemOnlyCall = false, IsFuncCall = false;
       SmallVector<const Value *, 2> PtrArgs;
 
@@ -522,7 +523,11 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
       // need to go through several PHIs to see it, and thus could be
       // repeated in the Objects list.
       SmallPtrSet<const Value *, 4> ObjSet;
+      // UE Change Begin: Relinking over cloning for single-use users
+#if 0
       SmallVector<Metadata *, 4> Scopes, NoAliases;
+#endif // 0
+      // UE Change End: Relinking over cloning for single-use users
 
       SmallSetVector<const Argument *, 4> NAPtrArgs;
       for (unsigned i = 0, ie = PtrArgs.size(); i != ie; ++i) {
@@ -571,6 +576,10 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
       if (IsFuncCall && !IsArgMemOnlyCall)
         CanDeriveViaCapture = true;
 
+      // UE Change Begin: Relinking over cloning for single-use users
+      ValueAliasMd &Alias = AMap[I];
+      // UE Change End: Relinking over cloning for single-use users
+
       // First, we want to figure out all of the sets with which we definitely
       // don't alias. Iterate over all noalias set, and add those for which:
       //   1. The noalias argument is not in the set of objects from which we
@@ -590,15 +599,21 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
                                  !PointerMayBeCapturedBefore(A,
                                    /* ReturnCaptures */ false,
                                    /* StoreCaptures */ false, I, &DT)))
-          NoAliases.push_back(NewScopes[A]);
+          // UE Change Begin: Relinking over cloning for single-use users
+          Alias.NoAliases.push_back(NewScopes[A]);
+          // UE Change End: Relinking over cloning for single-use users
       }
 
+      // UE Change Begin: Relinking over cloning for single-use users
+#if 0
       if (!NoAliases.empty())
         NI->setMetadata(LLVMContext::MD_noalias,
                         MDNode::concatenate(
                             NI->getMetadata(LLVMContext::MD_noalias),
                             MDNode::get(CalledFunc->getContext(), NoAliases)));
-
+#endif // 0
+      // UE Change End: Relinking over cloning for single-use users
+          
       // Next, we want to figure out all of the sets to which we might belong.
       // We might belong to a set if the noalias argument is in the set of
       // underlying objects. If there is some non-noalias argument in our list
@@ -616,17 +631,109 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
       if (CanAddScopes)
         for (const Argument *A : NoAliasArgs) {
           if (ObjSet.count(A))
-            Scopes.push_back(NewScopes[A]);
+          // UE Change Begin: Relinking over cloning for single-use users
+            Alias.Scopes.push_back(NewScopes[A]);
+          // UE Change End: Relinking over cloning for single-use users
         }
-
+          
+          // UE Change Begin: Relinking over cloning for single-use users
+#if 0
       if (!Scopes.empty())
         NI->setMetadata(
             LLVMContext::MD_alias_scope,
             MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
                                 MDNode::get(CalledFunc->getContext(), Scopes)));
+#endif // 0
+          // UE Change End: Relinking over cloning for single-use users
+    }
+
+    // UE Change Begin: Relinking over cloning for single-use users
+    // Try to fold the terminator
+    // It's a somewhat naive approach, but it avoids redundant tracking on
+    // "simple" conditions, such as DCE's on boolean arguments. The later
+    // pruned inlining also performs "simplification" on the insts.
+    bool Folded = false;
+    
+    const TerminatorInst *Term = BB->getTerminator();
+
+    // Try to fold cond-br
+    if (auto Br = dyn_cast_or_null<BranchInst>(Term)) {
+      if (Br->isConditional()) {
+        ConstantInt *Cond = dyn_cast<ConstantInt>(Br->getCondition());
+        if (!Cond) {
+          Cond = dyn_cast_or_null<ConstantInt>(VMap.lookup(Br->getCondition()));
+        }
+
+        // Known constant?
+        if (Cond) {
+          BasicBlock *Dest = Br->getSuccessor(!Cond->getZExtValue());
+
+          if (VisitedBB.insert(Dest).second) {
+            Worklist.push_back(Dest);
+          }
+        
+          Folded = true;
+        }
+	  }
+    }
+
+    // If not, just visit everything
+    if (!Folded) {
+      for (uint32_t i = 0; i < Term->getNumSuccessors(); i++) {
+        if (const BasicBlock *Successor = Term->getSuccessor(i);
+          VisitedBB.insert(Successor).second) {
+          Worklist.push_back(Successor);
+        }
+      }
+    }
+    // UE Change End: Relinking over cloning for single-use users
+  }
+}
+    
+// UE Change Begin: Relinking over cloning for single-use users
+/// Apply alias scopes to all relevant inlined values
+static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap, ValueAliasScopeMap &AMap) {
+  if (!EnableNoAliasConversion)
+    return;
+
+  const Function *CalledFunc = CS.getCalledFunction();
+  
+  // Iterate over all new instructions in the map; for all memory-access
+  // instructions, add the alias scope metadata.
+  for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
+       VMI != VMIE; ++VMI) {
+    if (const Instruction *I = dyn_cast<Instruction>(VMI->first)) {
+      if (!VMI->second)
+        continue;
+
+      Instruction *NI = dyn_cast<Instruction>(VMI->second);
+      if (!NI)
+        continue;
+
+      // May not have any md
+      ValueAliasScopeMap::iterator AliasIt = AMap.find(I);
+      if (AliasIt == AMap.end())
+        continue;
+
+      // Add noalias mds
+      if (!AliasIt->second.NoAliases.empty())
+        NI->setMetadata(LLVMContext::MD_noalias,
+                        MDNode::concatenate(
+                            NI->getMetadata(LLVMContext::MD_noalias),
+                            MDNode::get(CalledFunc->getContext(),
+                                        AliasIt->second.NoAliases)));
+
+      // Add chained inline scopes
+      if (!AliasIt->second.Scopes.empty())
+        NI->setMetadata(
+            LLVMContext::MD_alias_scope,
+            MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
+                                MDNode::get(CalledFunc->getContext(),
+                                            AliasIt->second.Scopes)));
     }
   }
 }
+// UE Change End: Relinking over cloning for single-use users
 
 /// If the inlined function has non-byval align arguments, then
 /// add @llvm.assume-based alignment assumptions to preserve this information.
@@ -938,6 +1045,31 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   }
 }
 
+// UE Change Begin: Relinking over cloning for single-use users
+/// Get all the original alias md of the called function
+static void GetCalledAliasScopeMD(const Function *CalledFunc,
+                                  ValueToValueMapTy &VMap,
+                                  SetVector<const MDNode *> &MD) {
+  uint32_t NumMappings = 0;
+
+  for (Function::const_iterator BB = CalledFunc->begin(), IE = CalledFunc->end()
+       ; BB != IE; ++BB) {
+    NumMappings += BB->size();
+
+    for (BasicBlock::const_iterator I = BB->begin(), JE = BB->end(); I != JE;
+      ++I) {
+      if (const MDNode *M = I->getMetadata(LLVMContext::MD_alias_scope))
+        MD.insert(M);
+      if (const MDNode *M = I->getMetadata(LLVMContext::MD_noalias))
+        MD.insert(M);
+    }
+  }
+
+  // Conservative est. for the number of mappings
+  VMap.resize(VMap.size() + NumMappings);
+}
+// UE Change End: Relinking over cloning for single-use users
+
 /// This function inlines the called function into the basic block of the
 /// caller. This returns false if it is not possible to inline this call.
 /// The program is still in a well defined state if this occurs though.
@@ -955,7 +1087,9 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // If IFI has any state in it, zap it before we fill it in.
   IFI.reset();
   
-  const Function *CalledFunc = CS.getCalledFunction();
+  // UE Change Begin: Relinking over cloning for single-use users
+  Function *CalledFunc = CS.getCalledFunction();
+  // UE Change End: Relinking over cloning for single-use users
   if (!CalledFunc ||              // Can't inline external function or indirect
       CalledFunc->isDeclaration() || // call, or call to a vararg function!
       CalledFunc->getFunctionType()->isVarArg()) return false;
@@ -1040,6 +1174,21 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       VMap[I] = ActualArg;
     }
 
+    // UE Change Begin: Relinking over cloning for single-use users
+    // Reference the alias md prior to inlining
+    // "Cloning" may move instructions if there's a single effective user
+    // and the callee is going to be pruned entirely.
+    SetVector<const MDNode *> MD;
+    GetCalledAliasScopeMD(CalledFunc, VMap, MD);
+
+    // As with the above, we gather/propagate the noalias arguments across the
+    // original function body. While this works, it unfortunately doesn't take
+    // advantage of the DCE during inlining, so we risk propagating dead
+    // instructions.
+    ValueAliasScopeMap AMap;
+    GetAliasScopeMetadata(CS, VMap, AMap, DL, IFI.AA);
+    // UE Change End: Relinking over cloning for single-use users
+
     // Add alignment assumptions if necessary. We do this before the inlined
     // instructions are actually cloned into the caller so that we can easily
     // check what will be known at the start of the inlined code.
@@ -1068,11 +1217,17 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // Update inlined instructions' line number information.
     fixupLineNumbers(Caller, FirstNewBlock, TheCall);
 
+    // UE Change Begin: Relinking over cloning for single-use users
     // Clone existing noalias metadata if necessary.
-    CloneAliasScopeMetadata(CS, VMap);
+    if (!MD.empty()) {
+      CloneAliasScopeMetadata(CS, VMap, MD);
+    }
 
     // Add noalias metadata if necessary.
-    AddAliasScopeMetadata(CS, VMap, DL, IFI.AA);
+    if (!AMap.empty()) {
+      AddAliasScopeMetadata(CS, VMap, AMap);
+    }
+    // UE Change End: Relinking over cloning for single-use users
 
     // FIXME: We could register any cloned assumptions instead of clearing the
     // whole function's cache.

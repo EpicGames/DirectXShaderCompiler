@@ -328,9 +328,11 @@ static Value *SimplifyX86vperm2(const IntrinsicInst &II,
 ///
 Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   auto Args = CI.arg_operands();
-  if (Value *V = SimplifyCall(CI.getCalledValue(), Args.begin(), Args.end(), DL,
-                              TLI, DT, AC))
-    return ReplaceInstUsesWith(CI, V);
+  if (!CI.use_empty()) {
+    if (Value *V = SimplifyCall(CI.getCalledValue(), Args.begin(), Args.end(), DL,
+                                TLI, DT, AC))
+      return ReplaceInstUsesWith(CI, V);
+  }
 
   if (isFreeCall(&CI, TLI))
     return visitFree(CI);
