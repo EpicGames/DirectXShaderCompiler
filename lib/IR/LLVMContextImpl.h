@@ -234,22 +234,34 @@ template <> struct MDNodeKeyImpl<DILocation> {
   unsigned Column;
   Metadata *Scope;
   Metadata *InlinedAt;
+  // UE Change Begin: Optimized DI location
+  unsigned Hash;
 
   MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
                 Metadata *InlinedAt)
-      : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt) {}
+      : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt) {
+    hash();
+  }
 
   MDNodeKeyImpl(const DILocation *L)
       : Line(L->getLine()), Column(L->getColumn()), Scope(L->getRawScope()),
-        InlinedAt(L->getRawInlinedAt()) {}
+        InlinedAt(L->getRawInlinedAt()), Hash(L->getHash()) {
+    assert(Hash != 0 && "Constructed key for unsorted location");
+  }
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt();
   }
   unsigned getHashValue() const {
-    return hash_combine(Line, Column, Scope, InlinedAt);
+    return Hash;
   }
+  
+  void hash() {
+    static_assert(offsetof(MDNodeKeyImpl, Hash) == 24);
+    Hash = hash_short_buffer(&Line, 28);
+  }
+  // UE Change End: Optimized DI location
 };
 
 /// \brief DenseMapInfo for GenericDINode.

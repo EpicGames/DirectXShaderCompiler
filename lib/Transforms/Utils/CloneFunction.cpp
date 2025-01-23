@@ -286,17 +286,23 @@ namespace {
 
     /// The specified block is found to be reachable, clone it and
     /// anything that it can reach.
-    void CloneBlock(const BasicBlock *BB, 
-                    BasicBlock::const_iterator StartingInst,
-                    std::vector<const BasicBlock*> &ToClone);
+    // UE Change Begin: Relinking over cloning for single-use users
+    void CloneBlock(BasicBlock *BB, 
+                    BasicBlock::iterator StartingInst,
+                    std::vector<BasicBlock*> &ToClone,
+                    bool MoveTrivialValues);
+    // UE Change End: Relinking over cloning for single-use users
   };
 }
 
 /// The specified block is found to be reachable, clone it and
 /// anything that it can reach.
-void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
-                                       BasicBlock::const_iterator StartingInst,
-                                       std::vector<const BasicBlock*> &ToClone){
+// UE Change Begin: Relinking over cloning for single-use users
+void PruningFunctionCloner::CloneBlock(BasicBlock *BB,
+                                       BasicBlock::iterator StartingInst,
+                                       std::vector<BasicBlock*> &ToClone,
+                                       bool MoveTrivialValues){
+// UE Change End: Relinking over cloning for single-use users
   WeakVH &BBEntry = VMap[BB];
 
   // Have we already cloned this block?
@@ -326,8 +332,13 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
 
   // Loop over all instructions, and copy them over, DCE'ing as we go.  This
   // loop doesn't include the terminator.
-  for (BasicBlock::const_iterator II = StartingInst, IE = --BB->end();
-       II != IE; ++II) {
+  // UE Change Begin: Relinking over cloning for single-use users
+  BasicBlock::iterator next;
+  for (BasicBlock::iterator II = StartingInst, IE = --BB->end();
+       II != IE; II = next) {
+    next = std::next(II);
+    // UE Change End: Relinking over cloning for single-use users
+    
     // If the "Director" remaps the instruction, don't clone it.
     if (Director) {
       CloningDirector::CloningAction Action 
@@ -345,15 +356,34 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
       if (Action == CloningDirector::SkipInstruction)
         continue;
     }
+    
+    // UE Change Begin: Relinking over cloning for single-use users
+    // Keep a copy around as the iterator may be invalidated
+    Instruction *Instr = II;
+    
+    // PHI nodes may not be trivial as the branching is entirely reconstructed
+    bool IsTriviallyMovable = MoveTrivialValues && !isa<PHINode>(Instr);
 
-    Instruction *NewInst = II->clone();
+    // Clone if needed, unlinked later
+    Instruction* NewInst = IsTriviallyMovable ? Instr : II->clone();
+      // UE Change End: Relinking over cloning for single-use users
 
     // Eagerly remap operands to the newly cloned instruction, except for PHI
     // nodes for which we defer processing until we update the CFG.
     if (!isa<PHINode>(NewInst)) {
-      RemapInstruction(NewInst, VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
+      // UE Change Begin: Relinking over cloning for single-use users
+      uint32_t Flags = RF_None;
+      
+      if (!ModuleLevelChanges)
+        Flags |= RF_NoModuleLevelChanges;
+
+      // If trivially movable, keep the md's as is
+      if (IsTriviallyMovable)
+        Flags |= RF_OperandsOnly;
+
+      RemapInstruction(NewInst, VMap, static_cast<RemapFlags>(Flags),
                        TypeMapper, Materializer);
+      // UE Change End: Relinking over cloning for single-use users
 
       // If we can simplify this instruction to some other value, simply add
       // a mapping to that value rather than inserting a new instruction into
@@ -365,18 +395,34 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
         if (Value *MappedV = VMap.lookup(V))
           V = MappedV;
 
-        VMap[II] = V;
-        delete NewInst;
+        // UE Change Begin: Relinking over cloning for single-use users
+        VMap[Instr] = V;
+        if (!IsTriviallyMovable) {
+          delete NewInst;
+        }
+        // UE Change End: Relinking over cloning for single-use users
         continue;
       }
     }
+    
+    // UE Change Begin: Relinking over cloning for single-use users
+    // Unlink *after* simplification, otherwise we'd have to clean up the uses
+    // Note that the metadata and associated state is kept, we're unlinking
+    // from the bb.
+    if (IsTriviallyMovable) {
+      NewInst->removeFromParent();
+    }
+    
+    // Cloned, inherit the name
+    if (Instr->hasName()) {
+      NewInst->setName(Instr->getName()+NameSuffix);
+    }
 
-    if (II->hasName())
-      NewInst->setName(II->getName()+NameSuffix);
-    VMap[II] = NewInst;                // Add instruction map to value.
+    VMap[Instr] = NewInst;                // Add instruction map to value.
     NewBB->getInstList().push_back(NewInst);
-    hasCalls |= (isa<CallInst>(II) && !isa<DbgInfoIntrinsic>(II));
-    if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
+    hasCalls |= (isa<CallInst>(Instr) && !isa<DbgInfoIntrinsic>(Instr));
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(Instr)) {
+    // UE Change End: Relinking over cloning for single-use users
       if (isa<ConstantInt>(AI->getArraySize()))
         hasStaticAllocas = true;
       else
@@ -465,8 +511,10 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
 /// This works like CloneAndPruneFunctionInto, except that it does not clone the
 /// entire function. Instead it starts at an instruction provided by the caller
 /// and copies (and prunes) only the code reachable from that instruction.
-void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
-                                     const Instruction *StartingInst,
+// UE Change Begin: Relinking over cloning for single-use users
+void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, Function *OldFunc,
+                                     Instruction *StartingInst,
+// UE Change End: Relinking over cloning for single-use users
                                      ValueToValueMapTy &VMap,
                                      bool ModuleLevelChanges,
                                      SmallVectorImpl<ReturnInst *> &Returns,
@@ -494,22 +542,31 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
   PruningFunctionCloner PFC(NewFunc, OldFunc, VMap, ModuleLevelChanges,
                             NameSuffix, CodeInfo, Director);
-  const BasicBlock *StartingBB;
+  // UE Change Begin: Relinking over cloning for single-use users
+  BasicBlock *StartingBB;
+  // UE Change End: Relinking over cloning for single-use users
   if (StartingInst)
     StartingBB = StartingInst->getParent();
   else {
     StartingBB = &OldFunc->getEntryBlock();
     StartingInst = StartingBB->begin();
   }
+         
+  // UE Change Begin: Relinking over cloning for single-use users
+  // Trivial values, such as instructions, can be moved directly from the callee
+  // to the caller, without a copy. This is only valid as long as the callee
+  // is to be destroyed after, as the body is effectively cannibalized.
+  bool MoveTrivialValues = OldFunc->getNumUses() == 1;
 
   // Clone the entry block, and anything recursively reachable from it.
-  std::vector<const BasicBlock*> CloneWorklist;
-  PFC.CloneBlock(StartingBB, StartingInst, CloneWorklist);
+  std::vector<BasicBlock*> CloneWorklist;
+  PFC.CloneBlock(StartingBB, StartingInst, CloneWorklist, MoveTrivialValues);
   while (!CloneWorklist.empty()) {
-    const BasicBlock *BB = CloneWorklist.back();
+    BasicBlock *BB = CloneWorklist.back();
     CloneWorklist.pop_back();
-    PFC.CloneBlock(BB, BB->begin(), CloneWorklist);
+    PFC.CloneBlock(BB, BB->begin(), CloneWorklist, MoveTrivialValues);
   }
+  // UE Change End: Relinking over cloning for single-use users
   
   // Loop over all of the basic blocks in the old function.  If the block was
   // reachable, we have cloned it and the old block is now in the value map:
@@ -710,7 +767,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// constant arguments cause a significant amount of code in the callee to be
 /// dead.  Since this doesn't produce an exact copy of the input, it can't be
 /// used for things like CloneFunction or CloneModule.
-void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+// UE Change Begin: Relinking over cloning for single-use users
+void llvm::CloneAndPruneFunctionInto(Function *NewFunc, Function *OldFunc,
+// UE Change End: Relinking over cloning for single-use users
                                      ValueToValueMapTy &VMap,
                                      bool ModuleLevelChanges,
                                      SmallVectorImpl<ReturnInst*> &Returns,

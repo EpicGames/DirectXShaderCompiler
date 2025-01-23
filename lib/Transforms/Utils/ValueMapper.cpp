@@ -371,6 +371,11 @@ void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VMap,
     }
   }
 
+  // UE Change Begin: Instruction remapping fast path
+  if (Flags & RF_OperandsOnly)
+    return;
+  // UE Change End: Instruction remapping fast path
+
   // Remap attached metadata.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   I->getAllMetadata(MDs);

@@ -25,6 +25,13 @@
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/ErrorHandling.h"
 
+// UE Change Begin: Improved cache locality of users
+// Numerous passes linearly iterate fn/bb instructions, so, improve locality
+// by allocating them next to each other. Note that this won't help cases when
+// the bb has been split numerous times.
+#define DXC_USE_USER_BLOCK_ALLOCATOR 1
+// UE Change End: Improved cache locality of users
+
 namespace llvm {
 
 /// \brief Compile-time customization of User operands.
@@ -259,6 +266,15 @@ template<> struct simplify_type<User::const_op_iterator> {
     return Val->get();
   }
 };
+
+// UE Change Begin: Improved cache locality of users
+#if DXC_USE_USER_BLOCK_ALLOCATOR
+struct UserThreadAlloc {
+  UserThreadAlloc();
+  ~UserThreadAlloc();
+};
+#endif // DXC_USE_USER_BLOCK_ALLOCATOR
+// UE Change End: Improved cache locality of users
 
 } // End llvm namespace
 

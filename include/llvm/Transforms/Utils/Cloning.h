@@ -161,8 +161,10 @@ public:
   virtual ValueMaterializer *getValueMaterializer() { return nullptr; }
 };
 
-void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
-                               const Instruction *StartingInst,
+// UE Change Begin: Relinking over cloning for single-use users
+void CloneAndPruneIntoFromInst(Function *NewFunc, Function *OldFunc,
+                               Instruction *StartingInst,
+// UE Change End: Relinking over cloning for single-use users
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
                                SmallVectorImpl<ReturnInst*> &Returns,
                                const char *NameSuffix = "", 
@@ -181,7 +183,9 @@ void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
 /// mappings.
 ///
-void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+// UE Change Begin: Relinking over cloning for single-use users
+void CloneAndPruneFunctionInto(Function *NewFunc, Function *OldFunc,
+// UE Change End: Relinking over cloning for single-use users
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
                                SmallVectorImpl<ReturnInst*> &Returns,
                                const char *NameSuffix = "",

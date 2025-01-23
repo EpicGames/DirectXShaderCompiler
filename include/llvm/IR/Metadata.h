@@ -946,6 +946,10 @@ public:
 
   /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Metadata *MD) {
+    // UE Change Begin: Optimized metadata class casting
+    return MD->getMetadataID() >= MDTupleKind && MD->getMetadataID() <= DIImportedEntityKind;
+    
+#if 0 // Compiles to a jump table instead of range check
     switch (MD->getMetadataID()) {
     default:
       return false;
@@ -954,6 +958,8 @@ public:
     return true;
 #include "llvm/IR/Metadata.def"
     }
+#endif // 0
+    // UE Change End: Optimized metadata class casting
   }
 
   /// \brief Check whether MDNode is a vtable access.

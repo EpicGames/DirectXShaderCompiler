@@ -53,7 +53,9 @@ namespace {
   };
 
   struct NumberedInstCache {
-    SmallDenseMap<const Instruction *, unsigned, 32> NumberedInsts;
+    // UE Change Begin: Reduce container growth
+    DenseMap<const Instruction *, unsigned> NumberedInsts;
+    // UE Change End: Reduce container growth
     BasicBlock::const_iterator LastInstFound;
     unsigned LastInstPos;
     const BasicBlock *BB;
@@ -273,8 +275,11 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
     if (Count++ >= Threshold)
       return Tracker->tooManyUses();
 
+    // UE Change Begin: Optimized capture traversal
+    if (!Visited.insert(&U).second)
+      continue;
     if (!Tracker->shouldExplore(&U)) continue;
-    Visited.insert(&U);
+    // UE Change End: Optimized capture traversal
     Worklist.push_back(&U);
   }
 

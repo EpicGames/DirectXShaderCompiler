@@ -546,6 +546,11 @@ public:
     bool bPreprocessStarted = false;
     DxilShaderHash ShaderHashContent;
     DxcThreadMalloc TM(m_pMalloc);
+    // UE Change Begin: Improved cache locality of users
+#if DXC_USE_USER_BLOCK_ALLOCATOR
+    UserThreadAlloc UserAlloc;
+#endif // DXC_USE_USER_BLOCK_ALLOCATOR
+    // UE Change End: Improved cache locality of users
 
     try {
       DefaultFPEnvScope fpEnvScope;

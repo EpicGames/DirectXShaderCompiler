@@ -132,6 +132,11 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // Add the branch to the exit block (around the unrolled loop)
   B.CreateCondBr(BrLoopExit, Exit, NewPH);
   InsertPt->eraseFromParent();
+
+  // Always branches to exit, so set the idom
+  if (DT) {
+    DT->changeImmediateDominator(Exit, PrologEnd);
+  }
 }
 
 /// Create a clone of the blocks in a loop and connect them together.
@@ -143,10 +148,12 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter, const bool UnrollProlog,
                             BasicBlock *InsertTop, BasicBlock *InsertBot,
                             std::vector<BasicBlock *> &NewBlocks,
                             LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
+                            DominatorTree *DT,
                             LoopInfo *LI) {
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
+  BasicBlock *Exit = L->getExitBlock();
   Function *F = Header->getParent();
   LoopBlocksDFS::RPOIterator BlockBegin = LoopBlocks.beginRPO();
   LoopBlocksDFS::RPOIterator BlockEnd = LoopBlocks.endRPO();
@@ -177,6 +184,10 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter, const bool UnrollProlog,
       // created block.
       InsertTop->getTerminator()->setSuccessor(0, NewBB);
 
+      // Update idom
+      if (DT) {
+        DT->addNewBlock(NewBB, InsertTop);
+      }
     }
     if (Latch == *BB) {
       // For the last block, if UnrollProlog is true, create a direct jump to
@@ -200,8 +211,34 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter, const bool UnrollProlog,
         NewIdx->addIncoming(IdxSub, NewBB);
       }
       LatchBR->eraseFromParent();
+
+      // Update idom to the cloned block
+      if (DT) {
+        DomTreeNode *IDom = DT->getNode(*BB)->getIDom();
+        DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[cast<Value>(IDom->getBlock())]));
+      }
     }
   }
+
+  if (DT) {
+    BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
+    
+    // Split (bot) pre-header is always dominated by the latch
+    DT->changeImmediateDominator(InsertBot, NewLatch);
+    
+    BasicBlock *CurIDom = DT->getNode(Exit)->getIDom()->getBlock();
+    BasicBlock *NewIDom = DT->findNearestCommonDominator(CurIDom, NewLatch);
+
+    // Update the exit idom to the first shared one
+    DT->changeImmediateDominator(Exit, NewIDom);
+  }
+
+  // Validate incrementally updated domtree
+#ifndef NDEBUG
+  if (DT) {
+    DT->verifyDomTree();
+  }
+#endif
 
   // Change the incoming values to the ones defined in the preheader or
   // cloned loop.
@@ -374,6 +411,12 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
          PreHeaderBR->getSuccessor(0) == PEnd &&
          "CFG edges in Preheader are not correct");
   PreHeaderBR->eraseFromParent();
+  
+  if (DT) {
+    // Moved pre-header is always dominated by the original
+    DT->changeImmediateDominator(NewPH, PH);
+  }
+  
   Function *F = Header->getParent();
   // Get an ordered list of blocks in the loop to help with the ordering of the
   // cloned blocks in the prolog code
@@ -394,7 +437,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   // the loop, otherwise we create a cloned loop to execute the extra
   // iterations. This function adds the appropriate CFG connections.
   CloneLoopBlocks(L, ModVal, UnrollPrologue, PH, PEnd, NewBlocks, LoopBlocks,
-                  VMap, LI);
+                  VMap, DT, LI);
 
   // Insert the cloned blocks into function just before the original loop
   F->getBasicBlockList().splice(PEnd, F->getBasicBlockList(), NewBlocks[0],
@@ -416,6 +459,15 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   BasicBlock *LastLoopBB = cast<BasicBlock>(VMap[Latch]);
   ConnectProlog(L, BECount, Count, LastLoopBB, PEnd, PH, NewPH, VMap,
                 /*AliasAnalysis*/ nullptr, DT, LI, LPM->getAsPass());
+
+  // Validate incrementally updated domtree
+#ifndef NDEBUG
+  if (DT) {
+    DT->verifyDomTree();
+    LI->verify();
+  }
+#endif // NDEBUG
+
   NumRuntimeUnrolled++;
   return true;
 }

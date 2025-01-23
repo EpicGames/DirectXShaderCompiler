@@ -36,6 +36,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
+#include "llvm/IR/PatternMatch.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-unroll"
@@ -72,9 +73,9 @@ static inline void RemapInstruction(Instruction *I,
 /// references to the eliminated BB.  The argument ForgottenLoops contains a set
 /// of loops that have already been forgotten to prevent redundant, expensive
 /// calls to ScalarEvolution::forgetLoop.  Returns the new combined block.
-static BasicBlock *
-FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo* LI, LPPassManager *LPM,
-                         SmallPtrSetImpl<Loop *> &ForgottenLoops) {
+static BasicBlock *FoldBlockIntoPredecessor(
+    BasicBlock *BB, LoopInfo *LI, LPPassManager *LPM,
+    DominatorTree *DT, SmallPtrSetImpl<Loop *> &ForgottenLoops) {
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
   // if there are no PHI nodes.
@@ -117,6 +118,21 @@ FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo* LI, LPPassManager *LPM,
       }
     }
   }
+
+  if (DT) {
+    if (DomTreeNode *DTN = DT->getNode(BB)) {
+      DomTreeNode *PredDTN = DT->getNode(OnlyPred);
+
+      // Change all idoms to OnlyPred
+      SmallVector<DomTreeNode*, 8> Children(DTN->begin(), DTN->end());
+      for (auto *DI : Children) {
+        DT->changeImmediateDominator(DI, PredDTN);
+      }
+
+      DT->eraseNode(BB);
+    }
+  }
+
   LI->removeBlock(BB);
 
   // Inherit predecessor's name if it exists...
@@ -181,6 +197,8 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     DEBUG(dbgs() << "  Can't unroll; Loop body cannot be cloned.\n");
     return false;
   }
+
+  DominatorTree *DT = PP ? &PP->getAnalysisIfAvailable<DominatorTreeWrapperPass>()->getDomTree() : nullptr;
 
   BasicBlock *Header = L->getHeader();
   BranchInst *BI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
@@ -252,6 +270,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   DebugLoc LoopLoc = L->getStartLoc();
   Function *F = Header->getParent();
   LLVMContext &Ctx = F->getContext();
+  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
   if (CompletelyUnroll) {
     DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
@@ -386,6 +405,18 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         Latches.push_back(New);
 
       NewBlocks.push_back(New);
+
+      if (*BB == Header) {
+        // Latch/exit blocks always dominate the header
+        DT->addNewBlock(New, Latches[It - 1]);
+      } else {
+        DomTreeNode* BBDomNode = DT->getNode(*BB);
+        DomTreeNode* BBIDom    = BBDomNode->getIDom();
+
+        // Point the new idom to the NEW unrolled block for the original idom
+        BasicBlock *OriginalBBIDom = BBIDom->getBlock();
+        DT->addNewBlock(New, cast<BasicBlock>(LastValueMap[cast<Value>(OriginalBBIDom)]));
+      }
     }
 
     // Remap all instructions in the most recent iteration
@@ -393,6 +424,15 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
       for (BasicBlock::iterator I = NewBlocks[i]->begin(),
            E = NewBlocks[i]->end(); I != E; ++I)
         ::RemapInstruction(I, LastValueMap);
+
+    // Carry over all previous assumptions, otherwise we need to recreate the assumptions cache
+    for (BasicBlock *NewBlock : NewBlocks) {
+      for (Instruction &I : *NewBlock) {
+        if (llvm::PatternMatch::match(&I, llvm::PatternMatch::m_Intrinsic<Intrinsic::assume>())) {
+          AC->registerAssumption(cast<CallInst>(&I));
+        }
+      }
+    }
   }
 
   // Loop over the PHI nodes in the original block, setting incoming values.
@@ -467,32 +507,48 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     }
   }
 
+  // Exit blocks may now have additional predecessors, update the idoms
+  if (DT && Count > 1) {
+    for (BasicBlock *BB : OriginalLoopBlocks) {
+      DomTreeNode *BBDomNode = DT->getNode(BB);
+
+      // Collect all defacto exits
+      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
+      for (DomTreeNode *ChildDomNode : BBDomNode->getChildren()) {
+        BasicBlock *ChildBB = ChildDomNode->getBlock();
+        if (!L->contains(ChildBB)) {
+          ChildrenToUpdate.push_back(ChildBB);
+        }
+      }
+
+      // Find the new common idom
+      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, LatchBlock);
+      for (BasicBlock *ChildBB : ChildrenToUpdate) {
+        DT->changeImmediateDominator(ChildBB, NewIDom);
+      }
+    }
+
+    // If runtime prolog is created, its conditional branch jumps around the
+    // block inserted for keeping LCSSA form. So the only predecessor of
+    // LoopExit is the last latch block.
+    if (RuntimeTripCount) {
+      DT->changeImmediateDominator(LoopExit, Latches.back());
+    }
+  }
+
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<Loop *, 4> ForgottenLoops;
   for (unsigned i = 0, e = Latches.size(); i != e; ++i) {
     BranchInst *Term = cast<BranchInst>(Latches[i]->getTerminator());
     if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
-      if (BasicBlock *Fold = FoldBlockIntoPredecessor(Dest, LI, LPM,
+      if (BasicBlock *Fold = FoldBlockIntoPredecessor(Dest, LI, LPM, DT,
                                                       ForgottenLoops))
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
     }
   }
 
-  // FIXME: We could register any cloned assumptions instead of clearing the
-  // whole function's cache.
-  AC->clear();
-
-  DominatorTree *DT = nullptr;
   if (PP) {
-    // FIXME: Reconstruct dom info, because it is not preserved properly.
-    // Incrementally updating domtree after loop unrolling would be easy.
-    if (DominatorTreeWrapperPass *DTWP =
-            PP->getAnalysisIfAvailable<DominatorTreeWrapperPass>()) {
-      DT = &DTWP->getDomTree();
-      DT->recalculate(*L->getHeader()->getParent());
-    }
-
     // Simplify any new induction variables in the partially unrolled loop.
     if (SE && !CompletelyUnroll) {
       SmallVector<WeakVH, 16> DeadInsts;
@@ -554,6 +610,14 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
       formLCSSARecursively(*OuterL, *DT, LI, SE);
     }
   }
+
+  // Double-check the incrementally updated domtree is valid
+#ifndef NDEBUG
+  if (DT) {
+    DT->verifyDomTree();
+    LI->verify();
+  }
+#endif // NDEBUG
 
   return true;
 }

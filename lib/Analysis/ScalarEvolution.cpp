@@ -4697,9 +4697,21 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
   SmallVector<Instruction *, 16> Worklist;
   PushLoopPHIs(L, Worklist);
 
-  SmallPtrSet<Instruction *, 8> Visited;
+  // UE Change Begin: Reduce container bucket moves
+  DenseSet<Instruction *> Visited;
+  // UE Change End: Reduce container bucket moves
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
+
+    // UE Change Begin: Ignore non-SCE values
+    // There's no point propagating instruction users when it's not something
+    // we can analyze. SCE only applies to integers and simple pointers.
+	if (!isSCEVable(I->getType())) {
+      assert(ValueExprMap.find_as(static_cast<Value *>(I)) == ValueExprMap.end() && "Non-SCE in value map");
+      continue;
+	}
+    // UE Change End: Ignore non-SCE values
+
     if (!Visited.insert(I).second)
       continue;
 

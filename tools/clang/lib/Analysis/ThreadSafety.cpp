@@ -965,8 +965,7 @@ public:
 BeforeSet::BeforeInfo* BeforeSet::insertAttrExprs(const ValueDecl* Vd,
     ThreadSafetyAnalyzer& Analyzer) {
   // Create a new entry for Vd.
-  auto& Entry = BMap.FindAndConstruct(Vd);
-  BeforeInfo* Info = &Entry.second;
+  BeforeInfo *Info = &BMap[Vd];
   BeforeVect* Bv = nullptr;
 
   for (Attr* At : Vd->attrs()) {
