@@ -254,6 +254,9 @@ enum class IntrinsicOp {
   IOP_unpack_u8u16 = 219,
   IOP_unpack_u8u32 = 220,
   IOP_VkRawBufferLoad = 221,
+// UE Change Begin: Add vk::RawBufferLoad2 intrinsics
+  IOP_VkRawBufferLoad2 = 423,
+// UE Change End: Add vk::RawBufferLoad2 intrinsics
   IOP_VkRawBufferStore = 222,
   IOP_VkReadClock = 223,
   IOP_Vkext_execution_mode = 224,
