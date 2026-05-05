@@ -11,6 +11,9 @@ add_llvm_library(LLVMipo
   IPConstantPropagation.cpp
   IPO.cpp
   InlineAlways.cpp
+  # UE Change Begin: Reimplemented inliner scheduler with a one-shot approach
+  OneShotInlineAlways.cpp
+  # UE Change End: Reimplemented inliner scheduler with a one-shot approach
   InlineSimple.cpp
   Inliner.cpp
   Internalize.cpp
