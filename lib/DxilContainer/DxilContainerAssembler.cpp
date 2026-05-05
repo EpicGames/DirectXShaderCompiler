@@ -2204,8 +2204,26 @@ void hlsl::SerializeDxilContainerForModule(
         WriteProgramPart(pModule->GetShaderModel(), pProgramStream, pStream);
       });
 
+  // UE Change Begin: Check for derivative ops (in compute)
+  struct UE5CustomData {
+    uint32_t FourCC;
+    uint64_t Data;
+  } customData = {};
+  
+  if (!pPrivateData) {
+    
+    customData.FourCC = DFCC_FeatureInfo;
+    customData.Data = pModule->GetModuleUsesDerivatives()
+                          ? hlsl::DXIL::OptFeatureInfo_UsesDerivatives
+                          : 0;
+
+    pPrivateData = &customData;
+    PrivateDataSize = sizeof(customData);
+  }
+
   // Private data part should be added last when assembling the container
-  // becasue there is no garuntee of aligned size
+  // because there is no guarantee of aligned size
+  // UE Change End: Check for derivative ops (in compute)
   if (pPrivateData) {
     writer.AddPart(
         hlsl::DFCC_PrivateData, PrivateDataSize,

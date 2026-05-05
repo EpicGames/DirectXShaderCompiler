@@ -165,6 +165,11 @@ public:
     return m_bAtomicInt64OnGroupShared;
   }
 
+  // UE Change Begin: Check for derivative ops (in compute)
+  void SetHasComputeDerivativeOps(bool flag) { m_bHasComputeDerivativeOps = flag; }
+  bool GetHasComputeDerivativeOps() const { return m_bHasComputeDerivativeOps; }
+  // UE Change End: Check for derivative ops (in compute)
+
   void SetDerivativesInMeshAndAmpShaders(bool flag) {
     m_bDerivativesInMeshAndAmpShaders = flag;
   }
@@ -359,7 +364,11 @@ private:
   unsigned m_bRequiresGroup : 1; // SHADER_FEATURE_OPT_REQUIRES_GROUP
                                  // (OptFeatureInfo_RequiresGroup)
 
-  uint32_t m_align1 : 23; // align to 64 bit.
+  // UE Change Begin: Check for derivative ops (in compute)
+  // NOTE: We must zero this bit out before the DXIL container is written out (or validation will fail)
+  unsigned m_bHasComputeDerivativeOps : 1;
+  uint32_t m_align1 : 22; // align to 64 bit.
+  // UE Change End: Check for derivative ops (in compute)
 };
 
 } // namespace hlsl

@@ -307,6 +307,13 @@ void DxilModule::CollectShaderFlagsForModule(ShaderFlags &Flags) {
     if (SM->IsMS() || SM->IsAS())
       Flags.SetDerivativesInMeshAndAmpShaders(true);
   }
+
+  // UE Change Begin: Check for derivative ops (in compute)
+  // NOTE: ValidateShaderFlags is very annoying, we can't keep the deriv flags set on the module because this func will fail
+  // Instead we'll fetch the value out before it's cleared, and pack it again in PRIV part
+  m_bModuleUsesDerivatives = Flags.GetHasComputeDerivativeOps();
+  // UE Change End: Check for derivative ops (in compute)
+
   // Clear function-local flags not intended for the module.
   Flags.ClearLocalFlags();
 
@@ -395,6 +402,12 @@ void DxilModule::CollectShaderFlagsForModule() {
     }
   }
 }
+
+// UE Change Begin: Check for derivative ops (in compute)
+bool DxilModule::GetModuleUsesDerivatives() const {
+  return m_bModuleUsesDerivatives;
+}
+// UE Change End: Check for derivative ops (in compute)
 
 void DxilModule::SetNumThreads(unsigned x, unsigned y, unsigned z) {
   DXASSERT(m_DxilEntryPropsMap.size() == 1 &&
