@@ -938,7 +938,10 @@ static HRESULT ReadOptsAndValidate(hlsl::options::MainArgs &mainArgs,
   raw_stream_ostream outStream(pOutputStream);
 
   if (0 != hlsl::options::ReadDxcOpts(table,
-                                      hlsl::options::HlslFlags::RewriteOption,
+                                      hlsl::options::HlslFlags::RewriteOption |
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+                                          hlsl::options::HlslFlags::CoreOption,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
                                       mainArgs, opts, outStream)) {
     CComPtr<IDxcBlob> pErrorBlob;
     IFT(pOutputStream->QueryInterface(&pErrorBlob));
@@ -1080,7 +1083,11 @@ static HRESULT DoRewriteUnused(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
 static HRESULT DoRewriteUnused(DxcLangExtensionsHelper *pHelper,
                                LPCSTR pFileName, ASTUnit::RemappedFile *pRemap,
                                LPCSTR pEntryPoint, DxcDefine *pDefines,
-                               UINT32 defineCount, bool bRemoveGlobals,
+                               UINT32 defineCount, 
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+                               const char **pArgs, UINT32 argCount,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
+                               bool bRemoveGlobals,
                                bool bRemoveFunctions, std::string &warnings,
                                std::string &result,
                                dxcutil::DxcArgsFileSystem *msfPtr) {
@@ -1093,6 +1100,11 @@ static HRESULT DoRewriteUnused(DxcLangExtensionsHelper *pHelper,
   // Parse compiler arguments
   hlsl::options::DxcOpts opts;
   opts.HLSLVersion = hlsl::LangStd::v2015;
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+  hlsl::options::MainArgs optsArgs{static_cast<int>(argCount), pArgs, 0};
+  CComPtr<IDxcOperationResult> optsArgResult;
+  ReadOptsAndValidate(optsArgs, opts, &optsArgResult);
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
 
   GenerateAST(pHelper, pFileName, pRemap, pDefines, defineCount, astHelper,
               opts, msfPtr, w);
@@ -1676,7 +1688,11 @@ public:
 
   HRESULT STDMETHODCALLTYPE RemoveUnusedGlobals(
       IDxcBlobEncoding *pSource, LPCWSTR pEntryPoint, DxcDefine *pDefines,
-      UINT32 defineCount, IDxcOperationResult **ppResult) override {
+      UINT32 defineCount, 
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+      const char **pArgs, UINT32 argCount,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
+      IDxcOperationResult **ppResult) override {
 
     if (pSource == nullptr || ppResult == nullptr ||
         (defineCount > 0 && pDefines == nullptr))
@@ -1712,7 +1728,9 @@ public:
       LPCWSTR pOutputName = nullptr; // TODO: Fill this in
       HRESULT status = DoRewriteUnused(
           &m_langExtensionsHelper, fakeName, pRemap.get(), utf8EntryPoint,
-          pDefines, defineCount, true /*removeGlobals*/,
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+          pDefines, defineCount, pArgs, argCount, true /*removeGlobals*/,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
           false /*removeFunctions*/, errors, rewrite, nullptr);
       return DxcResult::Create(
           status, DXC_OUT_HLSL,
@@ -1729,6 +1747,9 @@ public:
 
   HRESULT STDMETHODCALLTYPE RewriteUnchanged(
       IDxcBlobEncoding *pSource, DxcDefine *pDefines, UINT32 defineCount,
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+      const char **pArgs, UINT32 argCount,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
       IDxcOperationResult **ppResult) override {
     if (pSource == nullptr || ppResult == nullptr ||
         (defineCount > 0 && pDefines == nullptr))
@@ -1760,6 +1781,10 @@ public:
 	  // Parse compiler arguments
       hlsl::options::DxcOpts opts;
       opts.HLSLVersion = hlsl::LangStd::v2015;
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+      hlsl::options::MainArgs optsArgs{static_cast<int>(argCount), pArgs, 0};
+      ReadOptsAndValidate(optsArgs, opts, ppResult);
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
 
       std::string errors;
       std::string rewrite;
@@ -1781,6 +1806,9 @@ public:
       IDxcBlobEncoding *pSource,
       // Optional file name for pSource. Used in errors and include handlers.
       LPCWSTR pSourceName, DxcDefine *pDefines, UINT32 defineCount,
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+      const char **pArgs, UINT32 argCount,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
       // user-provided interface to handle #include directives (optional)
       IDxcIncludeHandler *pIncludeHandler, UINT32 rewriteOption,
       IDxcOperationResult **ppResult) override {
@@ -1814,9 +1842,10 @@ public:
 
       hlsl::options::DxcOpts opts;
       opts.HLSLVersion = hlsl::LangStd::v2015;
-      // UE Change Begin: Enable Vulkan specific features in rewriter.
-      opts.GenSPIRV = true;
-      // UE Change End: Enable Vulkan specific features in rewriter.
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+      hlsl::options::MainArgs optsArgs{static_cast<int>(argCount), pArgs, 0};
+      ReadOptsAndValidate(optsArgs, opts, ppResult);
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
 
       opts.RWOpt.SkipFunctionBody |=
           rewriteOption & RewriterOptionMask::SkipFunctionBody;
