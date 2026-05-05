@@ -245,6 +245,10 @@ public:
   ShaderFlags m_ShaderFlags;
   void CollectShaderFlagsForModule(ShaderFlags &Flags);
 
+  // UE Change Begin: Check for derivative ops (in compute)
+  bool GetModuleUsesDerivatives() const;
+  // UE Change End: Check for derivative ops (in compute)
+
   // Check if DxilModule contains multi component UAV Loads.
   // This funciton must be called after unused resources are removed from
   // DxilModule
@@ -386,6 +390,10 @@ private:
   bool m_bUseMinPrecision = true; // use min precision by default;
   bool m_bAllResourcesBound = false;
   bool m_bResMayAlias = false;
+
+  // UE Change Begin: Check for derivative ops (in compute)
+  bool m_bModuleUsesDerivatives = false;
+  // UE Change End: Check for derivative ops (in compute)
 
   // properties from HLModule that should not make it to the final DXIL
   uint32_t m_IntermediateFlags = 0;

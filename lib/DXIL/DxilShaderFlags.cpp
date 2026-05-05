@@ -47,6 +47,9 @@ ShaderFlags::ShaderFlags()
       m_bAdvancedTextureOps(false), m_bWriteableMSAATextures(false),
       m_bReserved(false), m_bSampleCmpGradientOrBias(false),
       m_bExtendedCommandInfo(false), m_bUsesDerivatives(false),
+      // UE Change Begin: Check for derivative ops (in compute)
+      m_bHasComputeDerivativeOps(false),
+      // UE Change End: Check for derivative ops (in compute)
       m_bRequiresGroup(false), m_align1(0) {
   // Silence unused field warnings
   (void)m_align1;
@@ -453,6 +456,10 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
   // model is mesh or amplification shader.
   bool hasDerivatives = false;
 
+  // UE Change Begin: Check for derivative ops (in compute)
+  bool hasComputeDerivatives = false;
+  // UE Change End: Check for derivative ops (in compute)
+
   // RequiresGroup is used to indicate any group shared memory use per-function,
   // before flags are combined from called functions. Later, this will allow
   // enforcing of the thread launch node shader case which has no visible group.
@@ -664,6 +671,15 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
             }
           }
           break;
+        // UE Change Begin: Check for derivative ops (in compute)
+        case DXIL::OpCode::QuadOp:
+        case DXIL::OpCode::QuadReadLaneAt:
+        case DXIL::OpCode::QuadVote:
+        case DXIL::OpCode::WriteSamplerFeedback:
+        case DXIL::OpCode::WriteSamplerFeedbackBias:
+          hasComputeDerivatives = true;
+          break;
+        // UE Change End: Check for derivative ops (in compute)
         case DXIL::OpCode::SampleLevel:
         case DXIL::OpCode::SampleCmpLevelZero:
           hasAdvancedTextureOps |= hasNonConstantSampleOffsets(CI);
@@ -808,6 +824,15 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
     }
   }
 
+  // UE Change Begin: Check for derivative ops (in compute)
+  hasComputeDerivatives |= hasDerivatives;
+  if (hasComputeDerivatives) {
+    const ShaderModel *SM = M->GetShaderModel();
+    if (!SM->IsCS())
+      hasComputeDerivatives = false;
+  }
+  // UE Change End: Check for derivative ops (in compute)
+
   if (hasDerivatives && DXIL::CompareVersions(valMajor, valMinor, 1, 8) < 0) {
     // Before validator version 1.8, UsesDerivatives flag was not set, and we
     // set the DerivativesInMeshAndAmpShaders only if the shader model in the
@@ -855,6 +880,9 @@ ShaderFlags ShaderFlags::CollectShaderFlags(const Function *F,
   flag.SetSampleCmpGradientOrBias(hasSampleCmpGradientOrBias);
   flag.SetExtendedCommandInfo(hasExtendedCommandInfo);
   flag.SetUsesDerivatives(hasDerivatives);
+  // UE Change Begin: Check for derivative ops (in compute)
+  flag.SetHasComputeDerivativeOps(hasComputeDerivatives);
+  // UE Change End: Check for derivative ops (in compute)
   flag.SetRequiresGroup(requiresGroup);
 
   return flag;
@@ -867,4 +895,7 @@ void ShaderFlags::CombineShaderFlags(const ShaderFlags &other) {
 void ShaderFlags::ClearLocalFlags() {
   SetUsesDerivatives(false);
   SetRequiresGroup(false);
+  // UE Change Begin: Check for derivative ops (in compute)
+  SetHasComputeDerivativeOps(false);
+  // UE Change End: Check for derivative ops (in compute)
 }
