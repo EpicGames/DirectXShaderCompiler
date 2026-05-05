@@ -16448,9 +16448,11 @@ void hlsl::CustomPrintHLSLAttr(const clang::Attr *A, llvm::raw_ostream &Out,
     Out << "triangleadj ";
     break;
 
+// UE Change Begin: HLSLGloballyCoherent is already handled in TypePrinter::printAttributedBefore
   case clang::attr::HLSLGloballyCoherent:
-    Out << "globallycoherent ";
+//    Out << "globallycoherent ";
     break;
+// UE Change End: HLSLGloballyCoherent is already handled in TypePrinter::printAttributedBefore
 
   case clang::attr::HLSLReorderCoherent:
     Out << "reordercoherent ";
