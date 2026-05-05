@@ -2893,7 +2893,9 @@ HRESULT CFunctionReflection::GetDesc(D3D12_FUNCTION_DESC *pDesc) {
   pDesc->RequiredFeatureFlags =
       m_FeatureFlags & ~(UINT64)D3D_SHADER_REQUIRES_EARLY_DEPTH_STENCIL;
   // Also Mask off function-level derivatives flag.
-  pDesc->RequiredFeatureFlags &= ~DXIL::OptFeatureInfo_UsesDerivatives;
+// UE Change Begin: commented during integration 32166058
+  //pDesc->RequiredFeatureFlags &= ~DXIL::OptFeatureInfo_UsesDerivatives;
+// UE Change End: commented during integration 32166058
   if (kind == DXIL::ShaderKind::Pixel && m_pProps &&
       m_pProps->ShaderProps.PS.EarlyDepthStencil) {
     pDesc->RequiredFeatureFlags |= D3D_SHADER_REQUIRES_EARLY_DEPTH_STENCIL;
