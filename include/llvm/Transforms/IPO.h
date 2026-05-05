@@ -103,6 +103,13 @@ Pass *createFunctionInliningPass(unsigned OptLevel, unsigned SizeOptLevel);
 Pass *createAlwaysInlinerPass();
 Pass *createAlwaysInlinerPass(bool InsertLifetime);
 
+// UE Change Begin: Reimplemented inliner scheduler with a one-shot approach
+//===----------------------------------------------------------------------===//
+/// createOneShotAlwaysInlinerPass - Return a new pass object that inlines only
+/// functions that are marked as "always_inline", using a one-shot approach.
+Pass *createOneShotAlwaysInlinerPass(bool InsertLifetime);
+// UE Change End: Reimplemented inliner scheduler with a one-shot approach
+
 //===----------------------------------------------------------------------===//
 /// createPruneEHPass - Return a new pass object which transforms invoke
 /// instructions into calls, if the callee can _not_ unwind the stack.

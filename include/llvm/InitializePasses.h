@@ -71,6 +71,9 @@ void initializeAliasAnalysisCounterPass(PassRegistry&);
 void initializeAliasDebuggerPass(PassRegistry&);
 void initializeAliasSetPrinterPass(PassRegistry&);
 void initializeAlwaysInlinerPass(PassRegistry&);
+// UE Change Begin: Reimplemented inliner scheduler with a one-shot approach
+void initializeOneShotAlwaysInlinerPass(PassRegistry&);
+// UE Change End: Reimplemented inliner scheduler with a one-shot approach
 void initializeArgPromotionPass(PassRegistry&);
 void initializeAtomicExpandPass(PassRegistry&);
 void initializeSampleProfileLoaderPass(PassRegistry&);

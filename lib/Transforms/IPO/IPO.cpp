@@ -33,6 +33,9 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeGlobalOptPass(Registry);
   initializeIPCPPass(Registry);
   initializeAlwaysInlinerPass(Registry);
+  // UE Change Begin: Reimplemented inliner scheduler with a one-shot approach
+  initializeOneShotAlwaysInlinerPass(Registry);
+  // UE Change End: Reimplemented inliner scheduler with a one-shot approach
   initializeSimpleInlinerPass(Registry);
   initializeInternalizePassPass(Registry);
   initializeLoopExtractorPass(Registry);
