@@ -171,19 +171,31 @@ private:
   uint32_t GetFreeBucketIndex(size_t Size) {
     unsigned long Index;
 
+	uint32_t AlignedSize = static_cast<uint32_t>(PowerOf2Floor(Size));
+
     // Note that for free's we use the floored power of two, we never want to promote the size to something greater.
     // The effective wasted space is the difference to the previous (or equal) power of two
-    uint8_t Result = _BitScanReverse(&Index, static_cast<uint32_t>(PowerOf2Floor(Size)));
+#if defined(_WIN32)
+     uint8_t Result = _BitScanReverse(&Index, AlignedSize);
     assert(Result);
+#else // _WIN32
+    Index = 31 - __builtin_clz(AlignedSize);
+#endif // _WIN32
     return Index;
   }
 
   uint32_t GetReuseBucketIndex(size_t Size) {
     unsigned long Index;
 
+    uint32_t AlignedSize = static_cast<uint32_t>(NextPowerOf2(Size));
+
     // When allocating, we need the next power of two, or current, that can accomodate the allocation
-    uint8_t Result = _BitScanReverse(&Index, static_cast<uint32_t>(NextPowerOf2(Size)));
+#if defined(_WIN32)
+    uint8_t Result = _BitScanReverse(&Index, AlignedSize);
     assert(Result);
+#else // _WIN32
+    Index = 31 - __builtin_clz(AlignedSize);
+#endif // _WIN32
     return Index;
   }
   
