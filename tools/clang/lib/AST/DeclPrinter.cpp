@@ -491,6 +491,9 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   PrintingPolicy SubPolicy(Policy);
   SubPolicy.SuppressSpecifiers = false;
+
+  // UE Change Begin: Adopted from LLVM code base to print function definitions outside their class scope correctly
+  #if 0
   std::string Proto = D->getNameInfo().getAsString();
 
   // HLSL Change Begin
@@ -505,6 +508,21 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Proto = D->getQualifiedNameAsString();
   }
   // HLSL Change End
+  #else
+  std::string Proto;
+  if (Policy.HLSLNoinlineMethod) {
+    Proto += D->getQualifiedNameAsString();
+  } else {
+    llvm::raw_string_ostream OS(Proto);
+    if (!Policy.SuppressScope) {
+      if (const NestedNameSpecifier *NS = D->getQualifier()) {
+        NS->print(OS, Policy);
+      }
+    }
+    D->getNameInfo().printName(OS);
+  }
+  #endif
+  // UE Change End: Adopted from LLVM code base to print function definitions outside their class scope correctly
 
   QualType Ty = D->getType();
   while (const ParenType *PT = dyn_cast<ParenType>(Ty)) {
