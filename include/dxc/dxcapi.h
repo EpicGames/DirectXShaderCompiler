@@ -121,6 +121,9 @@ typedef struct DxcShaderHash {
 #define DXC_PART_INPUT_SIGNATURE DXC_FOURCC('I', 'S', 'G', '1')
 #define DXC_PART_OUTPUT_SIGNATURE DXC_FOURCC('O', 'S', 'G', '1')
 #define DXC_PART_PATCH_CONSTANT_SIGNATURE DXC_FOURCC('P', 'S', 'G', '1')
+// UE Change Begin: Added Read derivative ops from DXIL container
+#define DXC_PART_FEATURE_INFO DXC_FOURCC('S', 'F', 'I', '0')
+// UE Change End: Added Read derivative ops from DXIL container
 
 // Some option arguments are defined here for continuity with D3DCompile
 // interface.
