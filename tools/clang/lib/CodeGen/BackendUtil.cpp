@@ -460,8 +460,12 @@ void EmitAssemblyHelper::CreatePasses() {
     if (OptLevel == 0)
       // Do not insert lifetime intrinsics at -O0.
       PMBuilder.Inliner = createAlwaysInlinerPass(false);
-    else
-      PMBuilder.Inliner = createAlwaysInlinerPass(PMBuilder.HLSLEnableLifetimeMarkers); // HLSL Change
+    else {
+      // UE Change Begin: Reimplemented inliner scheduler with a one-shot approach
+      // PMBuilder.Inliner = createAlwaysInlinerPass(PMBuilder.HLSLEnableLifetimeMarkers); // HLSL Change
+      PMBuilder.Inliner = createOneShotAlwaysInlinerPass(PMBuilder.HLSLEnableLifetimeMarkers);
+      // UE Change End: Reimplemented inliner scheduler with a one-shot approach
+    }
     break;
   }
 
