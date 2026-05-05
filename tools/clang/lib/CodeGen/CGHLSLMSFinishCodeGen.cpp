@@ -2161,6 +2161,17 @@ Value *TryEvalIntrinsic(CallInst *CI, IntrinsicOp intriOp,
     };
     return EvalTernaryIntrinsic(CI, clampF, clampD, clampI);
   } break;
+// UE Change Begin: Integrate fix (GitHub draft #6411) for double-precision fmod intrinsic in DXC.
+  case IntrinsicOp::IOP_fmod: {
+    auto fmodF = [](float a, float b) -> float {
+      return a - b * std::truncf(a / b);
+    };
+    auto fmodD = [](double a, double b) -> double {
+      return a - b * std::trunc(a / b);
+    };
+    return EvalBinaryIntrinsic(CI, fmodF, fmodD);
+  } break;
+// UE Change End: Integrate fix (GitHub draft #6411) for double-precision fmod intrinsic in DXC.
   default:
     return nullptr;
   }
