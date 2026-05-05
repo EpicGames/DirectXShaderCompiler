@@ -40,12 +40,14 @@
 #define VC_EXTRALEAN 1
 #define NONAMELESSSTRUCT 1
 
-#include <ObjIdl.h>
+// UE Change Begin: Clang Support
+#include <objidl.h>
 #include <atlbase.h> // atlbase.h needs to come before strsafe.h
 #include <intsafe.h>
 #include <strsafe.h>
-#include <unknwn.h>
-#include <windows.h>
+#include <Unknwn.h>
+#include <Windows.h>
+// UE Change End: Clang Support
 
 #include "dxc/config.h"
 
