@@ -749,6 +749,15 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
     if (tuDecl->isImplicit())
       continue;
 
+    // UE Change Begin: Examine sub declarations of templates
+    if (TemplateDecl *tmplDecl = dyn_cast_or_null<TemplateDecl>(tuDecl)) {
+      tuDecl = tmplDecl->getTemplatedDecl();
+      if (tuDecl == nullptr) {
+        continue;
+      }
+    }
+    // UE Change End: Examine sub declarations of templates
+
     VarDecl *varDecl = dyn_cast_or_null<VarDecl>(tuDecl);
     if (varDecl != nullptr) {
       if (!bRemoveGlobals) {
@@ -808,8 +817,19 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
 #endif
       // UE Change End: Workaround: Removing unused types not working properly.
       if (CXXRecordDecl *recordDecl = dyn_cast<CXXRecordDecl>(tagDecl)) {
-        for (CXXMethodDecl *methodDecl : recordDecl->methods()) {
-          unusedFunctions.insert(methodDecl);
+        for (Decl *memberDecl : recordDecl->decls()) {
+          // UE Change Begin: Examine sub declarations of templates
+          if (TemplateDecl *memberTmplDecl = dyn_cast_or_null<TemplateDecl>(memberDecl)) {
+            memberDecl = memberTmplDecl->getTemplatedDecl();
+            if (memberDecl == nullptr) {
+              continue;
+            }
+          }
+          if (CXXMethodDecl *memberMethodDecl =
+                  dyn_cast_or_null<CXXMethodDecl>(memberDecl)) {
+            unusedFunctions.insert( memberMethodDecl);
+          }
+          // UE Change End: Examine sub declarations of templates
         }
       }
     }
@@ -847,8 +867,18 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
   pendingFunctions.push_back(entryFnDecl);
   while (!pendingFunctions.empty()) {
     FunctionDecl *pendingDecl = pendingFunctions.pop_back_val();
-    visitedFunctions.insert(pendingDecl);
-    visitor.TraverseDecl(pendingDecl);
+	// UE Change Begin: Also visit re-declarations of forward declared functions
+    for (FunctionDecl *pendingDeclOrRedecl : pendingDecl->redecls()) {
+      visitedFunctions.insert(pendingDeclOrRedecl);
+      // UE Change Begin: Mark template pattern as visited as well
+      if (FunctionDecl *primaryTmplFnDecl =
+              pendingDeclOrRedecl->getTemplateInstantiationPattern()) {
+        visitedFunctions.insert(primaryTmplFnDecl);
+      }
+      // UE Change End: Mark template pattern as visited as well
+      visitor.TraverseDecl(pendingDeclOrRedecl);
+    }
+    // UE Change End: Also visit re-declarations of forward declared functions
   }
 
   // UE Change Begin: Track structure initialization and don't elide any
@@ -875,7 +905,11 @@ HRESULT CollectRewriteHelper(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
 
   // Don't remove visited functions.
   for (FunctionDecl *visitedFn : visitedFunctions) {
-    unusedFunctions.erase(visitedFn);
+	// UE Change Begin: If a forward declaration is used, its other forward declarations and implementation are used, too
+    for (FunctionDecl* visitedFnDecl : visitedFn->redecls()) {
+      unusedFunctions.erase(visitedFnDecl);
+    }
+	// UE Change End: If a forward declaration is used, its other forward declarations and implementation are used, too
   }
   w << "//found " << unusedFunctions.size() << " functions to remove\n";
 
@@ -1018,11 +1052,21 @@ static HRESULT DoRewriteUnused(TranslationUnitDecl *tu, LPCSTR pEntryPoint,
   for (FunctionDecl *unusedFn : helper.unusedFunctions) {
     // remove name of function to workaround assert when update lookup table.
     unusedFn->setDeclName(DeclarationName());
+    // UE Change Begin: Remove parent template declaration and not just sub declaration of templates
     if (CXXMethodDecl *methodDecl = dyn_cast<CXXMethodDecl>(unusedFn)) {
-      methodDecl->getParent()->removeDecl(unusedFn);
+      if (TemplateDecl *methodTmplDecl = methodDecl->getDescribedFunctionTemplate()) {
+        methodDecl->getLexicalParent()->removeDecl(methodTmplDecl);
+      } else {
+        methodDecl->getLexicalParent()->removeDecl(unusedFn);
+      }
     } else {
-      tu->removeDecl(unusedFn);
+      if (TemplateDecl *tmplDecl = unusedFn->getDescribedFunctionTemplate()) {
+        tu->removeDecl(tmplDecl);
+      } else {
+        tu->removeDecl(unusedFn);
+      }
     }
+    // UE Change End: Remove parent template declaration and not just sub declaration of templates
   }
 
   for (TypeDecl *unusedTy : helper.unusedTypes) {
