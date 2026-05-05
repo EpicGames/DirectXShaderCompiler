@@ -27,16 +27,27 @@ struct IDxcRewriter : public IUnknown {
 
   virtual HRESULT STDMETHODCALLTYPE RemoveUnusedGlobals(
       IDxcBlobEncoding *pSource, LPCWSTR entryPoint, DxcDefine *pDefines,
-      UINT32 defineCount, IDxcOperationResult **ppResult) = 0;
+      UINT32 defineCount, 
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+      LPCSTR *pArgs, UINT32 argCount,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
+      IDxcOperationResult **ppResult) = 0;
 
   virtual HRESULT STDMETHODCALLTYPE
   RewriteUnchanged(IDxcBlobEncoding *pSource, DxcDefine *pDefines,
-                   UINT32 defineCount, IDxcOperationResult **ppResult) = 0;
+                   UINT32 defineCount, 
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+                   LPCSTR *pArgs, UINT32 argCount,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
+                   IDxcOperationResult **ppResult) = 0;
 
   virtual HRESULT STDMETHODCALLTYPE RewriteUnchangedWithInclude(
       IDxcBlobEncoding *pSource,
       // Optional file name for pSource. Used in errors and include handlers.
       LPCWSTR pSourceName, DxcDefine *pDefines, UINT32 defineCount,
+// UE Change Begin: Enable HLSL 2021 language version in shader compiler backends.
+     LPCSTR *pArgs, UINT32 argCount,
+// UE Change End: Enable HLSL 2021 language version in shader compiler backends.
       // user-provided interface to handle #include directives (optional)
       IDxcIncludeHandler *pIncludeHandler, UINT32 rewriteOption,
       IDxcOperationResult **ppResult) = 0;
