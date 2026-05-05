@@ -189,7 +189,19 @@ public:
 class DxCompilerDllLoader : public SpecificDllLoader {
 public:
   HRESULT Initialize() {
-    return InitializeForDll(kDxCompilerLib, "DxcCreateInstance");
+	// UE Change Begin: Avoid linker issues when using external variable "kDxCompilerLib" in header file
+    //return InitializeForDll(kDxCompilerLib, "DxcCreateInstance");
+    #ifdef _WIN32
+    return InitializeForDll("dxcompiler.dll", "DxcCreateInstance");
+    #elif __APPLE__
+    return InitializeForDll("libdxcompiler.dylib", "DxcCreateInstance");
+    #else
+    return InitializeForDll("libdxcompiler.so", "DxcCreateInstance");
+    #endif
+	// UE Change End: Avoid linker issues when using external variable "kDxCompilerLib" in header file
+
+
+
   }
 };
 
@@ -200,7 +212,16 @@ public:
 class DXCLibraryDllLoader : public SpecificDllLoader {
 public:
   HRESULT Initialize() {
-    return InitializeForDll(kDxCompilerLib, "DxcCreateInstance");
+	// UE Change Begin: Avoid linker issues when using external variable "kDxCompilerLib" in header file
+    //return InitializeForDll(kDxCompilerLib, "DxcCreateInstance");
+    #ifdef _WIN32
+    return InitializeForDll("dxcompiler.dll", "DxcCreateInstance");
+    #elif __APPLE__
+    return InitializeForDll("libdxcompiler.dylib", "DxcCreateInstance");
+    #else
+    return InitializeForDll("libdxcompiler.so", "DxcCreateInstance");
+    #endif
+	// UE Change End: Avoid linker issues when using external variable "kDxCompilerLib" in header file
   }
 };
 
