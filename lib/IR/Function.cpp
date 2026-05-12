@@ -475,15 +475,15 @@ void Function::recalculateIntrinsicID() {
   const ValueName *ValName = this->getValueName();
   if (!ValName || !getName().startswith("llvm.")) {
     IntID = Intrinsic::not_intrinsic;
-// UE Change Begin: fixed orphaned llvm.dbg.value variable md node references
+    // UE Change Begin: Fixed orphaned llvm.dbg.value metadata references
     HasLLVMReservedName = false;
-// UE Change Begin: fixed orphaned llvm.dbg.value variable md node references
+    // UE Change End: Fixed orphaned llvm.dbg.value metadata references
     return;
   }
   IntID = lookupIntrinsicID(ValName);
-// UE Change Begin: fixed orphaned llvm.dbg.value variable md node references
+  // UE Change Begin: Fixed orphaned llvm.dbg.value metadata references
   HasLLVMReservedName = true;
-// UE Change Begin: fixed orphaned llvm.dbg.value variable md node references
+  // UE Change End: Fixed orphaned llvm.dbg.value metadata references
 }
 
 /// Returns a stable mangling for the type specified for use in the name
