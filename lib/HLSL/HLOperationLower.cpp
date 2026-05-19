@@ -7554,10 +7554,6 @@ constexpr IntrinsicLower gLowerTable[] = {
     {IntrinsicOp::IOP_unpack_u8u32, TranslateUnpack, DXIL::OpCode::Unpack4x8},
     {IntrinsicOp::IOP_VkRawBufferLoad, UnsupportedVulkanIntrinsic,
      DXIL::OpCode::NumOpCodes},
-    // UE Change Begin: Add vk::RawBufferLoad2 intrinsics
-    {IntrinsicOp::IOP_VkRawBufferLoad2, UnsupportedVulkanIntrinsic,
-     DXIL::OpCode::NumOpCodes},
-    // UE Change End: Add vk::RawBufferLoad2 intrinsics
     {IntrinsicOp::IOP_VkRawBufferStore, UnsupportedVulkanIntrinsic,
      DXIL::OpCode::NumOpCodes},
     {IntrinsicOp::IOP_VkReadClock, UnsupportedVulkanIntrinsic,
@@ -7986,6 +7982,11 @@ constexpr IntrinsicLower gLowerTable[] = {
     {IntrinsicOp::IOP___builtin_LinAlg_VectorAccumulateToDescriptor,
      TranslateLinAlgVectorAccumulateToDescriptor,
      DXIL::OpCode::LinAlgVectorAccumulateToDescriptor},
+
+    // UE Change Begin: Add vk::RawBufferLoad2 intrinsics
+    {IntrinsicOp::IOP_VkRawBufferLoad2, UnsupportedVulkanIntrinsic,
+     DXIL::OpCode::NumOpCodes},
+    // UE Change End: Add vk::RawBufferLoad2 intrinsics
 };
 constexpr size_t NumLowerTableEntries =
     sizeof(gLowerTable) / sizeof(gLowerTable[0]);
