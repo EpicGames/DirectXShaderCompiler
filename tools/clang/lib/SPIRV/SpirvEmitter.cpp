@@ -32,6 +32,11 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
+// UE Change Begin: Integrate PR 8513: Allow globallycoherent on DescriptorHeap
+// accesses (tags can be removed if final code is identical)
+#include "llvm/Support/SaveAndRestore.h"
+// UE Change End: Integrate PR 8513: Allow globallycoherent on DescriptorHeap
+// accesses (tags can be removed if final code is identical)
 
 #ifdef SUPPORT_QUERY_GIT_COMMIT_INFO
 #include "clang/Basic/Version.h"
@@ -1619,6 +1624,13 @@ bool SpirvEmitter::handleNodePayloadArrayType(const ParmVarDecl *decl,
 }
 
 void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
+  // UE Change Begin: Integrate PR 8513: Allow globallycoherent on DescriptorHeap
+  // accesses (tags can be removed if final code is identical)
+  llvm::SaveAndRestore<const FunctionDecl *> savedCurFunctionDecl(
+      curFunctionDecl, decl);
+  // UE Change End: Integrate PR 8513: Allow globallycoherent on
+  // DescriptorHeap accesses (tags can be removed if final code is identical)
+
   // Forward declaration of a function inside another.
   if (!decl->isThisDeclarationADefinition()) {
     addFunctionToWorkQueue(spvContext.getCurrentShaderModelKind(), decl,
@@ -6725,6 +6737,69 @@ SpirvEmitter::doCXXOperatorCallExpr(const CXXOperatorCallExpr *expr,
       auto *decl = cast<VarDecl>(declRefExpr->getDecl());
       auto *var = declIdMapper.createResourceHeap(decl, resourceType);
 
+      // UE Change Begin: Integrate PR 8513: Allow globallycoherent on
+      // DescriptorHeap accesses (tags can be removed if final code is
+      // identical)
+      // Decide whether the destination of this heap access is
+      // globallycoherent. Three sources:
+      //   (a) An enclosing DeclStmt VarDecl initializer
+      //   (b) A file-scope VarDecl initializer
+      //   (c) A ReturnStmt inside a globallycoherent returning helper
+      auto isCoherentDest = [](const VarDecl *vd) {
+        return vd && vd->hasAttr<HLSLGloballyCoherentAttr>();
+      };
+
+      bool destIsCoherent = false;
+
+      // (a) and (c): walk Stmt parents through transparent wrappers.
+      {
+        const Stmt *cur = parentExpr;
+        while (cur) {
+          const Stmt *p = parentMap->getParent(cur);
+          if (!p)
+            break;
+          if (isa<CastExpr>(p) || isa<ParenExpr>(p)) {
+            cur = p;
+            continue;
+          }
+          if (const auto *ds = dyn_cast<DeclStmt>(p)) {
+            for (const Decl *d : ds->decls())
+              if (const auto *vd = dyn_cast<VarDecl>(d))
+                if (isCoherentDest(vd)) {
+                  destIsCoherent = true;
+                  break;
+                }
+          } else if (isa<ReturnStmt>(p) && curFunctionDecl &&
+                     curFunctionDecl->hasAttr<HLSLGloballyCoherentAttr>()) {
+            destIsCoherent = true;
+          }
+          break;
+        }
+      }
+      // (b) File-scope init: VarDecl is the AST parent of the top cast.
+      if (!destIsCoherent) {
+        const Expr *top = parentExpr;
+        while (true) {
+          auto parents = astContext.getParents(*top);
+          if (parents.empty())
+            break;
+          if (const auto *castParent = parents[0].get<CastExpr>()) {
+            top = castParent;
+            continue;
+          }
+          if (const auto *vd = parents[0].get<VarDecl>()) {
+            if (isCoherentDest(vd))
+              destIsCoherent = true;
+          }
+          break;
+        }
+      }
+      if (destIsCoherent)
+        spvBuilder.decorateCoherent(
+            var, baseExpr->getExprLoc());
+	  // UE Change End: Integrate PR 8513: Allow globallycoherent on
+      // DescriptorHeap accesses (tags can be removed if final code is
+      // identical)
       auto *index = doExpr(indexExpr);
 
       if (spirvOptions.useDescriptorHeap) {

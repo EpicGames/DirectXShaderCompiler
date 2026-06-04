@@ -1656,6 +1656,15 @@ private:
 
   /// ParentMap of the current function.
   std::unique_ptr<ParentMap> parentMap = nullptr;
+  // UE Change Begin: Integrate PR 8513: Allow globallycoherent on
+  // DescriptorHeap accesses (tags can be removed if final code is
+  // identical)
+  /// AST FunctionDecl currently being lowered. Used by the descriptor-heap
+  /// access path to detect globallycoherent returning helpers.
+  const FunctionDecl *curFunctionDecl = nullptr;
+  // UE Change End: Integrate PR 8513: Allow globallycoherent on
+  // DescriptorHeap accesses (tags can be removed if final code is
+  // identical)
 };
 
 void SpirvEmitter::doDeclStmt(const DeclStmt *declStmt) {
