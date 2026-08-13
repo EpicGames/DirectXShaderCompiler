@@ -10768,14 +10768,27 @@ SpirvEmitter::processIntrinsicInterlockedMethod(const CallExpr *expr,
         }
       }
       auto *baseInstr = doExpr(base);
+// UE Change Begin: Fix invalid OpStore to an object of type OpTypeImage
       if (baseInstr->isRValue()) {
         // OpImageTexelPointer's Image argument must have a type of
-        // OpTypePointer with Type OpTypeImage. Need to create a temporary
-        // variable if the baseId is an rvalue.
-        baseInstr =
-            createTemporaryVar(base->getType(), getAstTypeName(base->getType()),
-                               baseInstr, base->getExprLoc());
+        // OpTypePointer with Type OpTypeImage.
+        // Do not copy the image into a temporary variable to
+        // get a pointer to it. Storing to an object of type OpTypeImage is
+        // invalid SPIR-V (VUID-StandaloneSpirv-OpTypeImage-06924), and nothing
+        // downstream is able to remove such a store, because the variable is
+        // used as a pointer by OpImageTexelPointer and so cannot be promoted.
+        // If the image was loaded from somewhere, point at where it came from
+        // instead; a descriptor cannot be modified by the shader, so the two
+        // are equivalent.
+        if (auto *load = dyn_cast<SpirvLoad>(baseInstr)) {
+          baseInstr = load->getPointer();
+        } else {
+          baseInstr = createTemporaryVar(base->getType(),
+                                         getAstTypeName(base->getType()),
+                                         baseInstr, base->getExprLoc());
+        }
       }
+// UE Change End: Fix invalid OpStore to an object of type OpTypeImage
       auto *coordInstr = doExpr(index);
       ptr = spvBuilder.createImageTexelPointer(baseType, baseInstr, coordInstr,
                                                zero, srcLoc);
