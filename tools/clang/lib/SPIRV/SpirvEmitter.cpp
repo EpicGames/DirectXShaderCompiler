@@ -8807,6 +8807,26 @@ void SpirvEmitter::assignToMSOutAttribute(
     const llvm::SmallVector<SpirvInstruction *, 4> &indices) {
   assert(spvContext.isMS() && !indices.empty());
 
+  const auto loc = decl->getLocation();
+
+  // UE Change Begin: Support nested structs in mesh shader output attributes
+  // A struct-typed member has no semantic and no stage variable of its own:
+  // DeclResultIdMapper::createStageVars created one stage variable per leaf
+  // field, so decompose the value and assign field by field. Empty structs
+  // contribute nothing.
+  const QualType declType = decl->getType();
+  if (declType->isStructureType() && !hlsl::IsHLSLResourceType(declType)) {
+    const auto *structDecl = declType->getAs<RecordType>()->getDecl();
+    for (const auto *field : structDecl->fields()) {
+      SpirvInstruction *subValue = spvBuilder.createCompositeExtract(
+          field->getType(), value,
+          {getNumBaseClasses(declType) + field->getFieldIndex()}, loc);
+      assignToMSOutAttribute(field, subValue, indices);
+    }
+    return;
+  }
+  // UE Change End: Support nested structs in mesh shader output attributes
+
   // Extract attribute index and vecComponent (if any).
   SpirvInstruction *attrIndex = indices.front();
   SpirvInstruction *vecComponent = nullptr;
@@ -8815,8 +8835,15 @@ void SpirvEmitter::assignToMSOutAttribute(
   }
 
   auto semanticInfo = declIdMapper.getStageVarSemantic(decl);
-  assert(semanticInfo.isValid());
-  const auto loc = decl->getLocation();
+  // UE Change Begin: Support nested structs in mesh shader output attributes
+  // Report a missing semantic instead of dereferencing a null Semantic below.
+  if (!semanticInfo.isValid()) {
+    emitError("semantic string missing for mesh shader output member '%0'",
+              loc)
+        << decl->getName();
+    return;
+  }
+  // UE Change End: Support nested structs in mesh shader output attributes
   // Special handle writes to clip/cull distance attributes.
   if (declIdMapper.glPerVertex.tryToAccess(
           hlsl::DXIL::SigPointKind::MSOut, semanticInfo.semantic->GetKind(),
@@ -9157,6 +9184,23 @@ const Expr *SpirvEmitter::collectArrayStructIndices(
           }
         }
       }
+
+      // UE Change Begin: Support nested structs in mesh shader output attributes
+      // The mesh output member found below is itself a struct: keep descending
+      // so that the leaf member, which carries the semantic and the stage
+      // variable, becomes the attribute instead of recording a struct field
+      // index that assignToMSOutAttribute cannot apply.
+      if (*isMSOutAttribute) {
+        if (const auto *baseMember = dyn_cast<MemberExpr>(base)) {
+          const QualType baseMemberType =
+              baseMember->getMemberDecl()->getType();
+          if (baseMemberType->isStructureType() &&
+              !hlsl::IsHLSLResourceType(baseMemberType)) {
+            return expr;
+          }
+        }
+      }
+      // UE Change End: Support nested structs in mesh shader output attributes
     }
 
     {
