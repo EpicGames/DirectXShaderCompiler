@@ -55,6 +55,9 @@ add_llvm_library(LLVMHLSL
   DxilNoOptLegalize.cpp
   DxilPoisonValues.cpp
   DxilDeleteRedundantDebugValues.cpp
+  # UE Change Begin: Structural groupshared elimination pass
+  DxilStructuralGroupSharedElimination.cpp
+  # UE Change End: Structural groupshared elimination pass
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/IR

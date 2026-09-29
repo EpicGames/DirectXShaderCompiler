@@ -1,3 +1,4 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
 // UE Change Begin: Reimplemented inliner scheduler with a one-shot approach
 
 #include "llvm/Transforms/IPO.h"

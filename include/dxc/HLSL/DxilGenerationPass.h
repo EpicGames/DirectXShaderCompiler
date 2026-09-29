@@ -154,4 +154,9 @@ void initializeDxilModuleInitPass(llvm::PassRegistry &);
 ModulePass *createDxilTrimTargetTypesPass();
 void initializeDxilTrimTargetTypesPass(llvm::PassRegistry &);
 
+// UE Change Begin: Structural groupshared elimination pass
+ModulePass *createStructuralGroupSharedEliminationPass();
+void initializeStructuralGroupSharedEliminationPass(llvm::PassRegistry &);
+// UE Change End: Structural groupshared elimination pass
+
 } // namespace llvm

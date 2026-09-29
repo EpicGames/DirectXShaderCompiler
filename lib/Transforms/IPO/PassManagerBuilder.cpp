@@ -392,6 +392,9 @@ void PassManagerBuilder::populateModulePassManager(
       MPM.add(createDxilDeadFunctionEliminationPass());
       MPM.add(createDxilDeleteRedundantDebugValuesPass());
       MPM.add(createNoPausePassesPass());
+      // UE Change Begin: Structural groupshared elimination pass
+      MPM.add(createStructuralGroupSharedEliminationPass());
+      // UE Change End: Structural groupshared elimination pass
       MPM.add(createDxilEmitMetadataPass());
     }
     // HLSL Change Ends.
@@ -711,6 +714,9 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createDxilDeleteRedundantDebugValuesPass());
     MPM.add(createNoPausePassesPass());
     MPM.add(createDxilValidateWaveSensitivityPass());
+    // UE Change Begin: Structural groupshared elimination pass
+    MPM.add(createStructuralGroupSharedEliminationPass());
+    // UE Change End: Structural groupshared elimination pass
     MPM.add(createDxilEmitMetadataPass());
   }
   // HLSL Change Ends.

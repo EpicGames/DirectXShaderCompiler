@@ -7314,6 +7314,14 @@ class db_dxil(object):
             "DXIL eliminate ouptut dynamic indexing",
             [],
         )
+        # UE Change Begin: Structural groupshared elimination pass
+        add_pass(
+            "hlsl-dxil-structural-groupshared-elimination",
+            "StructuralGroupSharedElimination",
+            "DXIL structural groupshared elimination",
+            [],
+        )
+        # UE Change End: Structural groupshared elimination pass
         add_pass(
             "dxil-delete-redundant-debug-values",
             "DxilDeleteRedundantDebugValues",
