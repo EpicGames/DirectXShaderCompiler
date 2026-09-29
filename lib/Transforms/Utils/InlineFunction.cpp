@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -397,6 +398,64 @@ struct ValueAliasMd {
 using ValueAliasScopeMap = DenseMap<const Instruction*, ValueAliasMd>;
 // UE Change End: Relinking over cloning for single-use users
 
+// UE Change Begin: Precomputed noalias argument captures
+struct NoAliasCaptures {
+  SmallPtrSet<const Instruction *, 8> CaptureInsts;
+  SmallPtrSet<const BasicBlock *, 8> CapturedAtEntry;
+  bool CapturedEverywhere = false;
+};
+
+struct NoAliasCaptureCollector : public CaptureTracker {
+  NoAliasCaptureCollector(NoAliasCaptures &Captures) : Captures(Captures) {
+    
+  }
+
+  void tooManyUses() override {
+    Captures.CapturedEverywhere = true;
+  }
+
+  bool shouldExplore(const Use *U) override {
+    return true;
+  }
+
+  bool captured(const Use *U) override {
+    if (isa<ReturnInst>(U->getUser()))
+      return false;
+
+    Captures.CaptureInsts.insert(cast<Instruction>(U->getUser()));
+    return false;
+  }
+
+  NoAliasCaptures &Captures;
+};
+
+static void CollectNoAliasCaptures(const Argument *A,
+                                      NoAliasCaptures &Captures) {
+  NoAliasCaptureCollector Collector(Captures);
+  PointerMayBeCaptured(A, &Collector);
+
+  if (Captures.CapturedEverywhere)
+    return;
+
+  SmallVector<const BasicBlock *, 32> Worklist;
+  for (const Instruction *I : Captures.CaptureInsts) {
+    const TerminatorInst *Term = I->getParent()->getTerminator();
+    for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i)
+      Worklist.push_back(Term->getSuccessor(i));
+  }
+
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    if (!Captures.CapturedAtEntry.insert(BB).second)
+      continue;
+
+    const TerminatorInst *Term = BB->getTerminator();
+    for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i)
+      Worklist.push_back(Term->getSuccessor(i));
+  }
+}
+// UE Change End: Precomputed noalias argument captures
+
 /// If the inlined function has noalias arguments,
 /// then add new alias scopes for each noalias argument, tag the mapped noalias
 /// parameters with noalias metadata specifying the new scope, and tag all
@@ -423,10 +482,12 @@ static void GetAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
   if (NoAliasArgs.empty())
     return;
 
-  // To do a good job, if a noalias variable is captured, we need to know if
-  // the capture point dominates the particular use we're considering.
-  DominatorTree DT;
-  DT.recalculate(const_cast<Function&>(*CalledFunc));
+  // UE Change Begin: Precomputed noalias argument captures
+  SmallVector<NoAliasCaptures, 4> ArgCaptures(NoAliasArgs.size());
+  for (unsigned i = 0, e = NoAliasArgs.size(); i != e; ++i) {
+    CollectNoAliasCaptures(NoAliasArgs[i], ArgCaptures[i]);
+  }
+  // UE Change End: Precomputed noalias argument captures
 
   // noalias indicates that pointer values based on the argument do not alias
   // pointer values which are not based on it. So we add a new "scope" for each
@@ -468,8 +529,21 @@ static void GetAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
   while (!Worklist.empty()) {
     const BasicBlock *BB = Worklist.pop_back_val();
 
+    // UE Change Begin: Precomputed noalias argument captures
+    SmallBitVector CapturedInBlock(NoAliasArgs.size());
+    // UE Change End: Precomputed noalias argument captures
+
     for (BasicBlock::const_iterator I = BB->begin(), JE = BB->end(); I != JE; ++I) {
   // UE Change End: Relinking over cloning for single-use users
+      // UE Change Begin: Precomputed noalias argument captures
+      SmallBitVector CapturedBefore = CapturedInBlock;
+      for (unsigned i = 0, e = NoAliasArgs.size(); i != e; ++i) {
+        if (ArgCaptures[i].CaptureInsts.count(&*I)) {
+          CapturedInBlock.set(i);
+        }
+      }
+      // UE Change End: Precomputed noalias argument captures
+
       bool IsArgMemOnlyCall = false, IsFuncCall = false;
       SmallVector<const Value *, 2> PtrArgs;
 
@@ -588,21 +662,20 @@ static void GetAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
       // An arbitrary function that might load pointers could see captured
       // noalias arguments via other noalias arguments or globals, and so we
       // must always check for prior capture.
-      for (const Argument *A : NoAliasArgs) {
-        if (!ObjSet.count(A) && (!CanDeriveViaCapture ||
-                                 // It might be tempting to skip the
-                                 // PointerMayBeCapturedBefore check if
-                                 // A->hasNoCaptureAttr() is true, but this is
-                                 // incorrect because nocapture only guarantees
-                                 // that no copies outlive the function, not
-                                 // that the value cannot be locally captured.
-                                 !PointerMayBeCapturedBefore(A,
-                                   /* ReturnCaptures */ false,
-                                   /* StoreCaptures */ false, I, &DT)))
-          // UE Change Begin: Relinking over cloning for single-use users
+      // UE Change Begin: Precomputed noalias argument captures
+      for (unsigned i = 0, e = NoAliasArgs.size(); i != e; ++i) {
+        const Argument *A = NoAliasArgs[i];
+        const NoAliasCaptures &Captures = ArgCaptures[i];
+
+        // Captured before this instruction?
+        bool CapturedHere = 
+          Captures.CapturedEverywhere || CapturedBefore[i] ||
+          Captures.CapturedAtEntry.count(BB);
+
+        if (!ObjSet.count(A) && (!CanDeriveViaCapture || !CapturedHere))
           Alias.NoAliases.push_back(NewScopes[A]);
-          // UE Change End: Relinking over cloning for single-use users
       }
+      // UE Change End: Precomputed noalias argument captures
 
       // UE Change Begin: Relinking over cloning for single-use users
 #if 0
